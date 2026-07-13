@@ -51,7 +51,9 @@ impl Default for GlobalConfig {
     }
 }
 
-fn default_site_name() -> String { "rawssg".into() }
+fn default_site_name() -> String {
+    "rawssg".into()
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BuildConfig {
@@ -65,10 +67,18 @@ pub struct BuildConfig {
     pub static_dir: String,
 }
 
-fn default_content_dir() -> String { "content".into() }
-fn default_output_dir() -> String { "dist".into() }
-fn default_templates_dir() -> String { "templates".into() }
-fn default_static_dir() -> String { "static".into() }
+fn default_content_dir() -> String {
+    "content".into()
+}
+fn default_output_dir() -> String {
+    "dist".into()
+}
+fn default_templates_dir() -> String {
+    "templates".into()
+}
+fn default_static_dir() -> String {
+    "static".into()
+}
 
 impl Default for BuildConfig {
     fn default() -> Self {
@@ -110,7 +120,9 @@ pub struct GeneratorDef {
     pub template: String,
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NavItem {
