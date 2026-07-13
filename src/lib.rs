@@ -11,6 +11,6 @@ pub mod util;
 pub mod serve;
 
 pub use error::RawssgError;
-pub use site::builder::{Site, SiteBuilder};
 pub use site::TemplateRenderer;
+pub use site::builder::{Site, SiteBuilder};
 pub use types::RawssgConfig;
