@@ -20,7 +20,12 @@ fn safe_path_outside_base() {
     let base = dir.path().join("sub");
     std::fs::create_dir(&base).unwrap();
     let base = base.canonicalize().unwrap();
-    let outside = dir.path().join("../outside.txt").canonicalize().unwrap();
+
+    // Create a file outside the base directory but inside the temp dir
+    let outside = dir.path().join("outside.txt");
+    std::fs::write(&outside, "test").unwrap();
+    let outside = outside.canonicalize().unwrap(); // now works because the file exists
+
     match safe_path(&RealFs, &base, &outside) {
         Err(RawssgError::PathTraversal(_)) => {}
         _ => panic!("expected PathTraversal error"),
