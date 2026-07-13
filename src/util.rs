@@ -2,12 +2,27 @@ use crate::error::RawssgError;
 use std::path::{Path, PathBuf};
 use crate::fs::FileSystem;
 
-pub fn safe_path(fs: &dyn FileSystem, base: &Path, candidate: &Path) -> Result<PathBuf, RawssgError> {
-    let base = fs.canonicalize(base).map_err(RawssgError::Io)?;
-    let resolved = fs.canonicalize(candidate).unwrap_or_else(|_| candidate.to_path_buf());
-    if !resolved.starts_with(&base) {
+pub fn safe_path(
+    fs: &dyn FileSystem,
+    base: &Path,
+    candidate: &Path,
+) -> Result<PathBuf, RawssgError> {
+    let base_canon = fs.canonicalize(base).map_err(RawssgError::Io)?;
+
+    let full_candidate = if candidate.is_relative() {
+        base_canon.join(candidate)
+    } else {
+        candidate.to_path_buf()
+    };
+
+    let resolved = fs
+        .canonicalize(&full_candidate)
+        .unwrap_or_else(|_| full_candidate.clone());
+
+    if !resolved.starts_with(&base_canon) {
         return Err(RawssgError::PathTraversal(candidate.to_path_buf()));
     }
+
     Ok(resolved)
 }
 pub fn slugify(title: &str) -> String {
