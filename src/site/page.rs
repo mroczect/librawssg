@@ -14,10 +14,9 @@ pub fn build_page_context(
     file_path: &Path,
     content_dir: &Path,
 ) -> Result<Option<PageContext>, RawssgError> {
-    safe_path(content_dir, file_path)?;
+	safe_path(fs, content_dir, file_path)?;
     let raw = fs.read_to_string(file_path)?;
-    let (fm, content_html) =
-        parse_frontmatter_and_render(&raw, file_path, markdown_renderer)?;
+    let (fm, content_html) = parse_frontmatter_and_render(&raw, file_path, markdown_renderer)?;
 
     if fm.draft {
         tracing::warn!("Skipping draft: {}", file_path.display());
@@ -27,7 +26,10 @@ pub fn build_page_context(
     let rel_path = file_path
         .strip_prefix(content_dir)
         .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
-    let url = rel_path.with_extension("html").to_string_lossy().to_string();
+    let url = rel_path
+        .with_extension("html")
+        .to_string_lossy()
+        .to_string();
     let depth = rel_path.components().count().saturating_sub(1);
 
     let pub_date = fm.date.map(|d| {
