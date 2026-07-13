@@ -19,3 +19,6 @@ tiny_http = { version = "0.12", optional = true }
 [features]
 default = []
 serve = ["notify", "tiny_http"]
+
+[dev-dependencies]
+tempfile = "3.27.0"
