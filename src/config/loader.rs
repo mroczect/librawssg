@@ -8,7 +8,9 @@ pub struct YamlConfigLoader<P: AsRef<Path> + Send + Sync> {
 }
 
 impl<P: AsRef<Path> + Send + Sync> YamlConfigLoader<P> {
-    pub fn new(path: P) -> Self { Self { path } }
+    pub fn new(path: P) -> Self {
+        Self { path }
+    }
 }
 
 impl<P: AsRef<Path> + Send + Sync> ConfigLoader for YamlConfigLoader<P> {
