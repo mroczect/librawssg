@@ -13,6 +13,7 @@ pub trait FileSystem: Send + Sync {
     fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>>;
     fn copy_file(&self, from: &Path, to: &Path) -> io::Result<u64>;
     fn walk_dir(&self, root: &Path) -> io::Result<Vec<PathBuf>>;
+    fn canonicalize(&self, path: &Path) -> io::Result<PathBuf>;
 }
 
 pub mod real;
