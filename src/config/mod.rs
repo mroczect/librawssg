@@ -1,12 +1,11 @@
+pub mod loader;
+
 use crate::error::RawssgError;
-use crate::types::GlobalConfig;
+use crate::types::RawssgConfig;
 
 pub trait ConfigLoader: Send + Sync {
-    fn load(&self) -> Result<GlobalConfig, RawssgError>;
-
-    fn load_or_default(&self) -> GlobalConfig {
+    fn load(&self) -> Result<RawssgConfig, RawssgError>;
+    fn load_or_default(&self) -> RawssgConfig {
         self.load().unwrap_or_default()
     }
 }
-
-pub mod loader;
