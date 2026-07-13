@@ -25,10 +25,7 @@ mod server {
         .to_string()
     }
 
-    fn handle_request(
-        request: tiny_http::Request,
-        dist_path: &Path,
-    ) -> Result<(), RawssgError> {
+    fn handle_request(request: tiny_http::Request, dist_path: &Path) -> Result<(), RawssgError> {
         let url = request.url().to_string();
         let requested_path = if url == "/" {
             "index.html".to_string()
@@ -53,8 +50,7 @@ mod server {
                 }
             },
             _ => {
-                let response =
-                    Response::from_string("404 Not Found").with_status_code(404);
+                let response = Response::from_string("404 Not Found").with_status_code(404);
                 request.respond(response).ok();
             }
         }
