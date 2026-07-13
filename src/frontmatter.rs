@@ -26,12 +26,11 @@ pub fn parse_frontmatter_and_render(
         .trim_start_matches("\n---")
         .trim_start_matches("\r\n---")
         .trim();
-    let fm: PageFrontMatter = serde_yaml::from_str(yaml_str).map_err(|e| {
-        RawssgError::Frontmatter {
+    let fm: PageFrontMatter =
+        serde_yaml::from_str(yaml_str).map_err(|e| RawssgError::Frontmatter {
             path: path.to_path_buf(),
             source: Box::new(e),
-        }
-    })?;
+        })?;
     let html = renderer.render(markdown_str);
     Ok((fm, html))
 }
