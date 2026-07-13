@@ -3,7 +3,19 @@ name = "librawssg"
 version = "0.1.0"
 edition = "2024"
 
-[lib]
-path = "src/lib.rs"
-
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+miette = { version = "7.6", features = ["fancy"] }
+pulldown-cmark = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+tera = "2.0"
+thiserror = "2.0"
+tracing = "0.1"
+walkdir = "2.5"
+notify = { version = "8.2", optional = true }
+tiny_http = { version = "0.12", optional = true }
+
+[features]
+default = []
+serve = ["notify", "tiny_http"]
