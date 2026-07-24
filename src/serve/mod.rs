@@ -67,7 +67,7 @@ mod server {
             .unwrap_or_else(|_| output_dir.to_path_buf());
 
         let server = Server::http(format!("0.0.0.0:{}", port))
-            .map_err(|e| RawssgError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            .map_err(|e| RawssgError::Io(std::io::Error::other(e)))?;
 
         tracing::info!("dev server listening on http://localhost:{}", port);
         for request in server.incoming_requests() {
