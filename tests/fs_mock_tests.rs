@@ -54,7 +54,7 @@ fn read_dir_returns_entries() {
     fs.add_file("/root/b.md", "b");
     fs.dirs.push(Path::new("/root/sub").to_path_buf());
     let entries = fs.read_dir(Path::new("/root")).unwrap();
-    assert_eq!(entries.len(), 3); // two files + one dir
+    assert_eq!(entries.len(), 3);
 }
 
 #[test]
