@@ -14,8 +14,9 @@ pub fn build_page_context(
     file_path: &Path,
     content_dir: &Path,
 ) -> Result<Option<PageContext>, RawssgError> {
-	safe_path(fs, content_dir, file_path)?;
-    let raw = fs.read_to_string(file_path)?;
+    let safe_file_path = safe_path(fs, content_dir, file_path)?;
+    let raw = fs.read_to_string(&safe_file_path)?;
+
     let (fm, content_html) = parse_frontmatter_and_render(&raw, file_path, markdown_renderer)?;
 
     if fm.draft {
