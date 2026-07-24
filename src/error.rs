@@ -1,5 +1,4 @@
 use miette::Diagnostic;
-use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Error, Debug, Diagnostic)]
@@ -18,7 +17,7 @@ pub enum RawssgError {
         help("Check the YAML frontmatter syntax and ensure the file starts with '---'")
     )]
     Frontmatter {
-        path: PathBuf,
+        path: std::path::PathBuf,
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
     },
@@ -32,7 +31,7 @@ pub enum RawssgError {
         code(rawssg::path_traversal),
         help("All file paths must stay within the project directory")
     )]
-    PathTraversal(PathBuf),
+    PathTraversal(String),
 
     #[error("Missing configuration key: {0}")]
     #[diagnostic(code(rawssg::missing_config))]

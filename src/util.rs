@@ -1,30 +1,76 @@
 use crate::error::RawssgError;
-use std::path::{Path, PathBuf};
 use crate::fs::FileSystem;
+use std::path::{Component, Path, PathBuf};
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+    for comp in path.components() {
+        match comp {
+            Component::ParentDir => {
+                if components
+                    .last()
+                    .map_or(false, |c: &Component| c != &Component::RootDir)
+                {
+                    components.pop();
+                }
+            }
+            Component::CurDir => {}
+            other => components.push(other),
+        }
+    }
+    components.into_iter().collect()
+}
 
 pub fn safe_path(
     fs: &dyn FileSystem,
     base: &Path,
     candidate: &Path,
 ) -> Result<PathBuf, RawssgError> {
-    let base_canon = fs.canonicalize(base).map_err(RawssgError::Io)?;
+    let base_canon = fs.canonicalize(base).map_err(|e| {
+        RawssgError::PathTraversal(format!(
+            "Cannot canonicalize base '{}': {}",
+            base.display(),
+            e
+        ))
+    })?;
 
-    let full_candidate = if candidate.is_relative() {
+    let joined = if candidate.is_relative() {
         base_canon.join(candidate)
     } else {
         candidate.to_path_buf()
     };
+    let normalized = normalize_path(&joined);
 
-    let resolved = fs
-        .canonicalize(&full_candidate)
-        .unwrap_or_else(|_| full_candidate.clone());
+    let resolved = if fs.exists(&normalized) {
+        fs.canonicalize(&normalized).map_err(|e| {
+            RawssgError::PathTraversal(format!(
+                "Cannot resolve path '{}': {}",
+                normalized.display(),
+                e
+            ))
+        })?
+    } else {
+        if let Some(parent) = normalized.parent() {
+            if !parent.starts_with(&base_canon) && parent != base_canon {
+                return Err(RawssgError::PathTraversal(format!(
+                    "Path escapes base: {}",
+                    normalized.display()
+                )));
+            }
+        }
+        normalized
+    };
 
     if !resolved.starts_with(&base_canon) {
-        return Err(RawssgError::PathTraversal(candidate.to_path_buf()));
+        return Err(RawssgError::PathTraversal(format!(
+            "Path traversal detected: {}",
+            resolved.display()
+        )));
     }
 
     Ok(resolved)
 }
+
 pub fn slugify(title: &str) -> String {
     title
         .to_lowercase()
@@ -65,7 +111,6 @@ pub fn match_pattern(pattern: &str, path: &Path) -> bool {
             return false;
         }
         if *pat == "**" {
-            // Matches zero or more directories
             return true;
         }
         if !segment_matches(pat, segments[i]) {
@@ -73,13 +118,9 @@ pub fn match_pattern(pattern: &str, path: &Path) -> bool {
         }
     }
 
-    // After matching all pattern segments, the number of segments must be equal
-    // unless the pattern ends with "**" (which we already returned true).
     pattern_segments.len() == segments.len()
 }
 
-/// Simple wildcard matching for a single path segment.
-/// `*` matches any sequence of characters (except path separators, but segments don't contain them).
 fn segment_matches(pattern: &str, segment: &str) -> bool {
     let mut pattern_chars = pattern.chars();
     let mut segment_chars = segment.chars();
@@ -87,20 +128,16 @@ fn segment_matches(pattern: &str, segment: &str) -> bool {
     loop {
         match pattern_chars.next() {
             Some('*') => {
-                // Greedily match as many characters as possible until the rest of the pattern matches.
                 let rest_of_pattern: String = pattern_chars.clone().collect();
                 if rest_of_pattern.is_empty() {
-                    // * at the end matches everything left.
                     return true;
                 }
-                // Try to find the rest pattern in the remaining segment.
-                // We'll consume segment chars until we find a match.
                 let mut remaining_segment: String = segment_chars.clone().collect();
                 while !remaining_segment.is_empty() {
                     if segment_matches(&rest_of_pattern, &remaining_segment) {
                         return true;
                     }
-                    segment_chars.next(); // consume one more char from segment
+                    segment_chars.next();
                     remaining_segment = segment_chars.clone().collect();
                 }
                 return false;
@@ -109,7 +146,7 @@ fn segment_matches(pattern: &str, segment: &str) -> bool {
                 Some(sc) if pc == sc => continue,
                 _ => return false,
             },
-            None => return segment_chars.next().is_none(), // both must end
+            None => return segment_chars.next().is_none(),
         }
     }
 }

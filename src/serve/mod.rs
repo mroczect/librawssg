@@ -1,11 +1,13 @@
 #[cfg(feature = "serve")]
 mod server {
     use crate::error::RawssgError;
+    use crate::fs::real::RealFs;
+    use crate::util::safe_path;
     use std::path::{Path, PathBuf};
     use std::thread;
     use tiny_http::{Header, Response, Server};
 
-    fn mime_type(path: &Path) -> String {
+    fn mime_type(path: &Path) -> &'static str {
         match path.extension().and_then(|e| e.to_str()) {
             Some("html") => "text/html; charset=utf-8",
             Some("css") => "text/css",
@@ -22,24 +24,26 @@ mod server {
             Some("ttf") => "font/ttf",
             _ => "application/octet-stream",
         }
-        .to_string()
     }
 
     fn handle_request(request: tiny_http::Request, dist_path: &Path) -> Result<(), RawssgError> {
         let url = request.url().to_string();
         let requested_path = if url == "/" {
-            "index.html".to_string()
+            "index.html"
         } else {
-            url.trim_start_matches('/').to_string()
+            url.trim_start_matches('/')
         };
 
-        let file_path = dist_path.join(&requested_path);
-        match file_path.canonicalize() {
-            Ok(canon) if canon.starts_with(dist_path) => match std::fs::read(&canon) {
+        let candidate = Path::new(requested_path);
+
+        match safe_path(&RealFs, dist_path, candidate) {
+            Ok(safe_path) => match std::fs::read(&safe_path) {
                 Ok(content) => {
-                    let mime = mime_type(&canon);
-                    let header = Header::from_bytes("Content-Type", mime.as_str())
-                        .expect("invalid MIME header");
+                    let mime = mime_type(&safe_path);
+                    let header = Header::from_bytes("Content-Type", mime.as_bytes())
+                        .unwrap_or_else(|_| {
+                            Header::from_bytes("Content-Type", b"application/octet-stream").unwrap()
+                        });
                     let response = Response::from_data(content).with_header(header);
                     request.respond(response).ok();
                 }
@@ -49,7 +53,7 @@ mod server {
                     request.respond(response).ok();
                 }
             },
-            _ => {
+            Err(_) => {
                 let response = Response::from_string("404 Not Found").with_status_code(404);
                 request.respond(response).ok();
             }
@@ -58,9 +62,10 @@ mod server {
     }
 
     pub fn start_dev_server(output_dir: &Path, port: u16) -> Result<(), RawssgError> {
-        let dist = output_dir
+        let dist: PathBuf = output_dir
             .canonicalize()
             .unwrap_or_else(|_| output_dir.to_path_buf());
+
         let server = Server::http(format!("0.0.0.0:{}", port))
             .map_err(|e| RawssgError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 

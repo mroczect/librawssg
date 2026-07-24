@@ -114,33 +114,36 @@ impl FileSystem for MockFs {
             .collect())
     }
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-            // Start from a virtual root "/"
-            let absolute = if path.is_absolute() {
-                path.to_path_buf()
-            } else {
-                Path::new("/").join(path)
-            };
+        // Start from a virtual root "/"
+        let absolute = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            Path::new("/").join(path)
+        };
 
-            // Resolve . and .. manually
-            let mut components = Vec::new();
-            for comp in absolute.components() {
-                match comp {
-                    std::path::Component::ParentDir => {
-                        components.pop(); // go up one level
-                    }
-                    std::path::Component::CurDir => {}
-                    other => components.push(other),
+        // Resolve . and .. manually
+        let mut components = Vec::new();
+        for comp in absolute.components() {
+            match comp {
+                std::path::Component::ParentDir => {
+                    components.pop(); // go up one level
                 }
-            }
-            let canonical: PathBuf = components.iter().collect();
-
-            // Check whether the canonical path is known (file or dir)
-            if self.files.contains_key(&canonical) || self.dirs.contains(&canonical) {
-                Ok(canonical)
-            } else {
-                Err(io::Error::new(io::ErrorKind::NotFound, "mock: path not found"))
+                std::path::Component::CurDir => {}
+                other => components.push(other),
             }
         }
+        let canonical: PathBuf = components.iter().collect();
+
+        // Check whether the canonical path is known (file or dir)
+        if self.files.contains_key(&canonical) || self.dirs.contains(&canonical) {
+            Ok(canonical)
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "mock: path not found",
+            ))
+        }
+    }
 }
 
 // ---------- Mock MarkdownRenderer ----------

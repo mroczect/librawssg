@@ -1,5 +1,5 @@
 use librawssg::site::builder::SiteBuilder;
-use librawssg::types::{RawssgConfig, ContentTypeDef};
+use librawssg::types::{ContentTypeDef, RawssgConfig};
 use std::fs;
 use tempfile::tempdir;
 
@@ -39,7 +39,11 @@ fn build_simple_site() {
     fs::create_dir(&content).unwrap();
     fs::create_dir(&templates).unwrap();
 
-    fs::write(content.join("index.md"), "---\ntitle: Home\ndesc: Home page\n---\nHello").unwrap();
+    fs::write(
+        content.join("index.md"),
+        "---\ntitle: Home\ndesc: Home page\n---\nHello",
+    )
+    .unwrap();
     fs::write(templates.join("base.html"), "{{ page_title }}").unwrap();
 
     let mut config = make_config();
@@ -64,7 +68,11 @@ fn draft_skipped_during_build() {
     fs::create_dir(&content).unwrap();
     fs::create_dir(&templates).unwrap();
 
-    fs::write(content.join("draft.md"), "---\ntitle: Draft\ndesc: x\ndraft: true\n---\n...").unwrap();
+    fs::write(
+        content.join("draft.md"),
+        "---\ntitle: Draft\ndesc: x\ndraft: true\n---\n...",
+    )
+    .unwrap();
     fs::write(templates.join("base.html"), "base").unwrap();
 
     let mut config = make_config();
@@ -72,10 +80,7 @@ fn draft_skipped_during_build() {
     config.build.output_dir = dir.path().join("dist").to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
 
-    let site = SiteBuilder::new()
-        .config(config)
-        .build()
-        .unwrap();
+    let site = SiteBuilder::new().config(config).build().unwrap();
     assert!(site.pages().is_empty());
 }
 
@@ -88,8 +93,16 @@ fn blog_list_page_generated() {
     fs::create_dir(&templates).unwrap();
 
     fs::create_dir(content.join("blog")).unwrap();
-    fs::write(content.join("blog/post1.md"), "---\ntitle: P1\ndesc: x\ndate: 2025-01-01\n---\nOne").unwrap();
-    fs::write(content.join("blog/post2.md"), "---\ntitle: P2\ndesc: x\ndate: 2025-01-02\n---\nTwo").unwrap();
+    fs::write(
+        content.join("blog/post1.md"),
+        "---\ntitle: P1\ndesc: x\ndate: 2025-01-01\n---\nOne",
+    )
+    .unwrap();
+    fs::write(
+        content.join("blog/post2.md"),
+        "---\ntitle: P2\ndesc: x\ndate: 2025-01-02\n---\nTwo",
+    )
+    .unwrap();
     fs::write(templates.join("base.html"), "{{ page_title }}").unwrap();
     fs::write(templates.join("post.html"), "post").unwrap();
     fs::write(templates.join("blog_list.html"), "list").unwrap();
@@ -99,10 +112,7 @@ fn blog_list_page_generated() {
     config.build.output_dir = dir.path().join("dist").to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
 
-    let site = SiteBuilder::new()
-        .config(config)
-        .build()
-        .unwrap();
+    let site = SiteBuilder::new().config(config).build().unwrap();
 
     assert_eq!(site.pages().len(), 3); // 2 posts + 1 list page
     let list = site.pages().iter().find(|p| p.is_list).unwrap();
@@ -119,7 +129,11 @@ fn generate_output_files_basic() {
     fs::create_dir(&content).unwrap();
     fs::create_dir(&templates).unwrap();
 
-    fs::write(content.join("about.md"), "---\ntitle: About\ndesc: x\n---\nAbout content").unwrap();
+    fs::write(
+        content.join("about.md"),
+        "---\ntitle: About\ndesc: x\n---\nAbout content",
+    )
+    .unwrap();
     fs::write(templates.join("base.html"), "{{ page_content }}").unwrap();
 
     let mut config = make_config();
@@ -127,10 +141,7 @@ fn generate_output_files_basic() {
     config.build.output_dir = output.to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
 
-    let site = SiteBuilder::new()
-        .config(config)
-        .build()
-        .unwrap();
+    let site = SiteBuilder::new().config(config).build().unwrap();
     site.generate().expect("generate failed");
     assert!(output.join("about.html").exists());
 }

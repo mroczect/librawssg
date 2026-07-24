@@ -13,6 +13,65 @@ pub struct RawssgConfig {
     pub generators: GeneratorsConfig,
 }
 
+impl RawssgConfig {
+    pub fn validate(&self) -> Result<(), crate::error::RawssgError> {
+        if self.site.site_name.trim().is_empty() {
+            return Err(crate::error::RawssgError::Config(
+                "site.name cannot be empty".into(),
+            ));
+        }
+
+        for ct in &self.content_types {
+            if ct.name.trim().is_empty() {
+                return Err(crate::error::RawssgError::Config(format!(
+                    "content_type name cannot be empty (pattern: {})",
+                    ct.pattern
+                )));
+            }
+            if ct.template.trim().is_empty() {
+                return Err(crate::error::RawssgError::Config(format!(
+                    "content_type '{}' must have a template",
+                    ct.name
+                )));
+            }
+            if let Err(e) = glob::Pattern::new(&ct.pattern) {
+                return Err(crate::error::RawssgError::Config(format!(
+                    "Invalid glob pattern '{}' for content_type '{}': {}",
+                    ct.pattern, ct.name, e
+                )));
+            }
+        }
+
+        if self.generators.rss.enabled {
+            if self.generators.rss.template.trim().is_empty() {
+                return Err(crate::error::RawssgError::Config(
+                    "rss.template is required when RSS enabled".into(),
+                ));
+            }
+            if self.generators.rss.path.trim().is_empty() {
+                return Err(crate::error::RawssgError::Config(
+                    "rss.path is required when RSS enabled".into(),
+                ));
+            }
+        }
+
+        if self.generators.sitemap.enabled {
+            if self.generators.sitemap.template.trim().is_empty() {
+                return Err(crate::error::RawssgError::Config(
+                    "sitemap.template is required when sitemap enabled".into(),
+                ));
+            }
+            if self.generators.sitemap.path.trim().is_empty() {
+                return Err(crate::error::RawssgError::Config(
+                    "sitemap.path is required when sitemap enabled".into(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GlobalConfig {
     #[serde(default)]

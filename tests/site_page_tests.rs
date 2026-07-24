@@ -70,7 +70,10 @@ fn date_formatting() {
 #[test]
 fn nested_depth_calculation() {
     let mut fs = MockFs::new();
-    fs.add_file("/content/blog/post.md", "---\ntitle: Nested\ndesc: x\n---\n");
+    fs.add_file(
+        "/content/blog/post.md",
+        "---\ntitle: Nested\ndesc: x\n---\n",
+    );
     let renderer = MockMarkdownRenderer::identity();
     let ctx = build_page_context(
         &fs,

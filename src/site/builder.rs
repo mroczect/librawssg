@@ -22,48 +22,73 @@ impl Site {
     pub fn pages(&self) -> &[PageContext] {
         &self.pages
     }
+
     #[tracing::instrument(skip(self))]
     pub fn generate(self) -> Result<(), RawssgError> {
+        let tmp_dir = self.output_dir.with_extension("tmp");
+        if self.fs.exists(&tmp_dir) {
+            self.fs.remove_dir_all(&tmp_dir)?;
+        }
+        self.fs.create_dir_all(&tmp_dir)?;
+
+        self.generate_to(&tmp_dir)?;
+
         if self.fs.exists(&self.output_dir) {
             self.fs.remove_dir_all(&self.output_dir)?;
         }
-        self.fs.create_dir_all(&self.output_dir)?;
+        std::fs::rename(&tmp_dir, &self.output_dir)
+            .map_err(|e| RawssgError::SiteGeneration(format!("Atomic rename failed: {}", e)))?;
 
-        // Write pages
+        Ok(())
+    }
+
+    fn generate_to(&self, output_base: &Path) -> Result<(), RawssgError> {
+        self.fs.create_dir_all(output_base)?;
+
         for page in &self.pages {
+            if page.is_list {
+                continue;
+            }
             let mut ctx = Context::new();
             self.fill_context(page, &mut ctx);
             let template = self.template_for_page(page);
             let html = self.renderer.render(&template, &ctx)?;
-            let out_path = safe_path(self.fs.as_ref(), &self.output_dir, &self.output_dir.join(&page.url))?;
+
+            let candidate = Path::new(&page.url);
+            let out_path = safe_path(self.fs.as_ref(), output_base, candidate)?;
+            if let Some(parent) = out_path.parent() {
+                self.fs.create_dir_all(parent)?;
+            }
             self.fs.write(&out_path, html.as_bytes())?;
         }
 
-        // List pages
         for page in &self.pages {
-            if page.is_list {
-                let mut ctx = Context::new();
-                self.fill_context(page, &mut ctx);
-                if let Some(items) = &page.list_items {
-                    ctx.insert("pages", items);
-                }
-                let template = self.template_for_page(page);
-                let html = self.renderer.render(&template, &ctx)?;
-                let out_path = safe_path(self.fs.as_ref(), &self.output_dir, &self.output_dir.join(&page.url))?;
-                self.fs.write(&out_path, html.as_bytes())?;
+            if !page.is_list {
+                continue;
             }
+            let mut ctx = Context::new();
+            self.fill_context(page, &mut ctx);
+            if let Some(items) = &page.list_items {
+                ctx.insert("pages", items);
+            }
+            let template = self.template_for_page(page);
+            let html = self.renderer.render(&template, &ctx)?;
+
+            let candidate = Path::new(&page.url);
+            let out_path = safe_path(self.fs.as_ref(), output_base, candidate)?;
+            if let Some(parent) = out_path.parent() {
+                self.fs.create_dir_all(parent)?;
+            }
+            self.fs.write(&out_path, html.as_bytes())?;
         }
 
-        // Static assets (copy from static_dir)
         let static_dir = Path::new(&self.config.build.static_dir);
         if self.fs.exists(static_dir) {
-            self.copy_static_assets(static_dir)?;
+            self.copy_static_assets(static_dir, output_base)?;
         }
 
-        // Copy non-markdown assets from content_dir (e.g., images, CSS, JS)
-        self.copy_content_assets()?;
+        self.copy_content_assets(output_base)?;
 
-        // Generators
         if self.config.generators.rss.enabled {
             let blog_posts: Vec<&PageContext> = self
                 .pages
@@ -77,8 +102,15 @@ impl Site {
                     &blog_posts,
                     &self.base_url,
                 )?;
-                let path = self.output_dir.join(&self.config.generators.rss.path);
-                self.fs.write(&path, rss.as_bytes())?;
+                let feed_path = safe_path(
+                    self.fs.as_ref(),
+                    output_base,
+                    Path::new(&self.config.generators.rss.path),
+                )?;
+                if let Some(parent) = feed_path.parent() {
+                    self.fs.create_dir_all(parent)?;
+                }
+                self.fs.write(&feed_path, rss.as_bytes())?;
             }
         }
 
@@ -88,8 +120,15 @@ impl Site {
                 &self.pages,
                 &self.base_url,
             )?;
-            let path = self.output_dir.join(&self.config.generators.sitemap.path);
-            self.fs.write(&path, sitemap.as_bytes())?;
+            let sitemap_path = safe_path(
+                self.fs.as_ref(),
+                output_base,
+                Path::new(&self.config.generators.sitemap.path),
+            )?;
+            if let Some(parent) = sitemap_path.parent() {
+                self.fs.create_dir_all(parent)?;
+            }
+            self.fs.write(&sitemap_path, sitemap.as_bytes())?;
         }
 
         Ok(())
@@ -135,13 +174,13 @@ impl Site {
         "base.html".into()
     }
 
-    #[tracing::instrument(skip(self))]
-    fn copy_static_assets(&self, static_dir: &Path) -> Result<(), RawssgError> {
+    #[tracing::instrument(skip(self, output_base))]
+    fn copy_static_assets(&self, static_dir: &Path, output_base: &Path) -> Result<(), RawssgError> {
         for entry in self.fs.walk_dir(static_dir)? {
             let rel = entry
                 .strip_prefix(static_dir)
                 .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
-            let dest = self.output_dir.join(rel);
+            let dest = safe_path(self.fs.as_ref(), output_base, rel)?;
             if let Some(parent) = dest.parent() {
                 self.fs.create_dir_all(parent)?;
             }
@@ -150,13 +189,12 @@ impl Site {
         Ok(())
     }
 
-    fn copy_content_assets(&self) -> Result<(), RawssgError> {
+    fn copy_content_assets(&self, output_base: &Path) -> Result<(), RawssgError> {
         if !self.fs.exists(&self.content_dir) {
             return Ok(());
         }
 
         for entry in self.fs.walk_dir(&self.content_dir)? {
-            // Skip markdown files because they are already processed as pages
             if entry.extension().map(|e| e == "md").unwrap_or(false) {
                 continue;
             }
@@ -164,8 +202,7 @@ impl Site {
             let rel = entry
                 .strip_prefix(&self.content_dir)
                 .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
-            let dest = self.output_dir.join(rel);
-
+            let dest = safe_path(self.fs.as_ref(), output_base, rel)?;
             if let Some(parent) = dest.parent() {
                 self.fs.create_dir_all(parent)?;
             }
@@ -238,7 +275,8 @@ impl SiteBuilder {
 
     #[tracing::instrument(skip(self))]
     pub fn build(mut self) -> Result<Site, RawssgError> {
-        // Use config values if not overridden
+        self.config.validate()?;
+
         if self.content_dir == PathBuf::from("content") {
             self.content_dir = PathBuf::from(&self.config.build.content_dir);
         }
@@ -246,7 +284,6 @@ impl SiteBuilder {
             self.output_dir = PathBuf::from(&self.config.build.output_dir);
         }
 
-        // Load templates from templates_dir
         let templates_dir = PathBuf::from(&self.config.build.templates_dir);
         if self.fs.exists(&templates_dir) {
             for entry in self.fs.walk_dir(&templates_dir)? {
@@ -305,7 +342,6 @@ impl SiteBuilder {
             }
         }
 
-        // Sort blog posts by date desc
         blog_posts.sort_by(|a, b| {
             b.frontmatter
                 .date
@@ -313,7 +349,6 @@ impl SiteBuilder {
                 .then_with(|| a.frontmatter.title.cmp(&b.frontmatter.title))
         });
 
-        // Generate list pages for content types with list_template
         for ct in &self.config.content_types {
             if ct.list_enabled && ct.list_template.is_some() {
                 let items: Vec<PageContext> = pages
