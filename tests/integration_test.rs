@@ -12,7 +12,6 @@ fn full_site_generation() {
     fs::create_dir(&content).unwrap();
     fs::create_dir(&templates).unwrap();
 
-    // Write markdown files
     fs::write(
         content.join("index.md"),
         "---\ntitle: Home\ndesc: Home page\n---\nWelcome!",
@@ -24,7 +23,6 @@ fn full_site_generation() {
     )
     .unwrap();
 
-    // Write a template
     fs::write(
         templates.join("base.html"),
         "<html><head><title>{{ page_title }}</title></head><body>{{ page_content }}</body></html>",
