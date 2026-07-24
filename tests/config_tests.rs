@@ -45,7 +45,7 @@ fn yaml_loader_partial_defaults() {
     let loader = YamlConfigLoader::new(file.path());
     let config = loader.load().unwrap();
     assert_eq!(config.site.site_name, "OnlyName");
-    assert_eq!(config.build.content_dir, "content"); // default
+    assert_eq!(config.build.content_dir, "content");
 }
 
 #[test]

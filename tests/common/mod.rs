@@ -43,10 +43,10 @@ impl MockFs {
 
 impl FileSystem for MockFs {
     fn read_to_string(&self, path: &Path) -> io::Result<String> {
-        if let Some(err_path) = &self.read_error {
-            if err_path == path {
-                return Err(io::Error::new(io::ErrorKind::NotFound, "mock error"));
-            }
+        if let Some(err_path) = &self.read_error
+            && err_path == path
+        {
+            return Err(io::Error::new(io::ErrorKind::NotFound, "mock error"));
         }
         self.files
             .get(path)
@@ -85,17 +85,17 @@ impl FileSystem for MockFs {
     fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
         let mut entries = vec![];
         for f in self.files.keys() {
-            if let Some(parent) = f.parent() {
-                if parent == path {
-                    entries.push(f.clone());
-                }
+            if let Some(parent) = f.parent()
+                && parent == path
+            {
+                entries.push(f.clone());
             }
         }
         for d in &self.dirs {
-            if let Some(parent) = d.parent() {
-                if parent == path {
-                    entries.push(d.clone());
-                }
+            if let Some(parent) = d.parent()
+                && parent == path
+            {
+                entries.push(d.clone());
             }
         }
         Ok(entries)
@@ -164,6 +164,7 @@ impl MarkdownRenderer for MockMarkdownRenderer {
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub struct MockTemplateRenderer {
     pub templates: HashMap<String, String>,
     pub render_fn: Box<dyn Fn(&str, &Context) -> Result<String, RawssgError> + Send + Sync>,

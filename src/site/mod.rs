@@ -27,6 +27,12 @@ impl TeraRenderer {
     }
 }
 
+impl Default for TeraRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TemplateRenderer for TeraRenderer {
     fn render(&self, template: &str, context: &Context) -> Result<String, RawssgError> {
         self.tera
@@ -55,7 +61,7 @@ pub struct MarkdownPageHandler;
 
 impl ContentHandler for MarkdownPageHandler {
     fn can_handle(&self, _rel: &Path, orig: &Path) -> bool {
-        orig.extension().map_or(false, |e| e == "md")
+        orig.extension().is_some_and(|e| e == "md")
     }
 
     #[tracing::instrument(skip(self, fs, md_renderer))]
