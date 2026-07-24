@@ -1,8 +1,8 @@
 use librawssg::error::RawssgError;
+use librawssg::fs::real::RealFs;
 use librawssg::util::{match_pattern, relative_prefix, safe_path, slugify};
 use std::path::Path;
 use tempfile::tempdir;
-use librawssg::fs::real::RealFs;
 
 #[test]
 fn safe_path_inside_base() {
