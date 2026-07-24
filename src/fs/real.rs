@@ -76,6 +76,6 @@ impl FileSystem for RealFs {
         Ok(files)
     }
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-        Ok(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
+        path.canonicalize()
     }
 }
