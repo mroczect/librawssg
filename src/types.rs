@@ -189,7 +189,7 @@ pub struct NavItem {
     pub url: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct PageFrontMatter {
     pub title: String,
     pub desc: String,
@@ -205,21 +205,6 @@ pub struct PageFrontMatter {
     pub tags: Vec<String>,
     #[serde(default)]
     pub draft: bool,
-}
-
-impl Default for PageFrontMatter {
-    fn default() -> Self {
-        Self {
-            title: String::new(),
-            desc: String::new(),
-            author: None,
-            repo_url: None,
-            license: None,
-            date: None,
-            tags: vec![],
-            draft: false,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Clone)]
