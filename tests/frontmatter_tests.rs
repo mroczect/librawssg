@@ -37,8 +37,6 @@ fn invalid_yaml_in_frontmatter() {
 
 #[test]
 fn no_closing_dashes_treats_rest_as_yaml() {
-    // Without closing dashes, everything after opening is treated as YAML
-    // Must include required fields title and desc
     let input = "---\ntitle: Test\ndesc: Test desc\n";
     let renderer = MockMarkdownRenderer::identity();
     let (fm, html) = parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();
@@ -69,7 +67,6 @@ fn only_frontmatter_no_content() {
 
 #[test]
 fn empty_yaml_values_still_valid() {
-    // YAML with empty string values is still valid frontmatter
     let input = "---\ntitle: \"\"\ndesc: \"\"\n---\n# Content after FM";
     let renderer = MockMarkdownRenderer::identity();
     let (fm, html) = parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();

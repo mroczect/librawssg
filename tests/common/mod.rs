@@ -114,19 +114,17 @@ impl FileSystem for MockFs {
             .collect())
     }
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-        // Start from a virtual root "/"
         let absolute = if path.is_absolute() {
             path.to_path_buf()
         } else {
             Path::new("/").join(path)
         };
 
-        // Resolve . and .. manually
         let mut components = Vec::new();
         for comp in absolute.components() {
             match comp {
                 std::path::Component::ParentDir => {
-                    components.pop(); // go up one level
+                    components.pop();
                 }
                 std::path::Component::CurDir => {}
                 other => components.push(other),
@@ -134,7 +132,6 @@ impl FileSystem for MockFs {
         }
         let canonical: PathBuf = components.iter().collect();
 
-        // Check whether the canonical path is known (file or dir)
         if self.files.contains_key(&canonical) || self.dirs.contains(&canonical) {
             Ok(canonical)
         } else {
@@ -146,7 +143,6 @@ impl FileSystem for MockFs {
     }
 }
 
-// ---------- Mock MarkdownRenderer ----------
 pub struct MockMarkdownRenderer {
     pub render_fn: Box<dyn Fn(&str) -> String + Send + Sync>,
 }
@@ -168,7 +164,6 @@ impl MarkdownRenderer for MockMarkdownRenderer {
     }
 }
 
-// ---------- Mock TemplateRenderer ----------
 pub struct MockTemplateRenderer {
     pub templates: HashMap<String, String>,
     pub render_fn: Box<dyn Fn(&str, &Context) -> Result<String, RawssgError> + Send + Sync>,
@@ -203,7 +198,6 @@ impl TemplateRenderer for MockTemplateRenderer {
     }
 }
 
-// ---------- Mock ConfigLoader ----------
 pub struct MockConfigLoader {
     pub config_fn: Box<dyn Fn() -> Result<RawssgConfig, RawssgError> + Send + Sync>,
 }
@@ -222,7 +216,6 @@ impl ConfigLoader for MockConfigLoader {
     }
 }
 
-// Helper to create a default config for tests
 pub fn default_test_config() -> RawssgConfig {
     RawssgConfig::default()
 }

@@ -11,7 +11,7 @@ fn make_config() -> RawssgConfig {
     cfg.build.static_dir = "static".into();
     cfg.content_types.push(ContentTypeDef {
         name: "blog".into(),
-        pattern: "blog/*".into(), // <-- Perbaikan: gunakan wildcard sederhana
+        pattern: "blog/*".into(),
         template: "post.html".into(),
         list_template: Some("blog_list.html".into()),
         list_enabled: true,
@@ -114,7 +114,7 @@ fn blog_list_page_generated() {
 
     let site = SiteBuilder::new().config(config).build().unwrap();
 
-    assert_eq!(site.pages().len(), 3); // 2 posts + 1 list page
+    assert_eq!(site.pages().len(), 3);
     let list = site.pages().iter().find(|p| p.is_list).unwrap();
     assert_eq!(list.url, "blog/index.html");
     assert_eq!(list.list_items.as_ref().unwrap().len(), 2);
