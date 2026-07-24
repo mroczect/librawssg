@@ -1,15 +1,14 @@
 mod common;
 use common::MockMarkdownRenderer;
-use librawssg::frontmatter::parse_frontmatter_and_render;
 use librawssg::error::RawssgError;
+use librawssg::frontmatter::parse_frontmatter_and_render;
 use std::path::Path;
 
 #[test]
 fn valid_frontmatter_parsed() {
     let input = "---\ntitle: Test\ndesc: Desc\n---\n# Content";
     let renderer = MockMarkdownRenderer::identity();
-    let (fm, html) =
-        parse_frontmatter_and_render(input, Path::new("file.md"), &renderer).unwrap();
+    let (fm, html) = parse_frontmatter_and_render(input, Path::new("file.md"), &renderer).unwrap();
     assert_eq!(fm.title, "Test");
     assert_eq!(fm.desc, "Desc");
     assert_eq!(html, "# Content");
@@ -42,8 +41,7 @@ fn no_closing_dashes_treats_rest_as_yaml() {
     // Must include required fields title and desc
     let input = "---\ntitle: Test\ndesc: Test desc\n";
     let renderer = MockMarkdownRenderer::identity();
-    let (fm, html) =
-        parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();
+    let (fm, html) = parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();
     assert_eq!(fm.title, "Test");
     assert_eq!(fm.desc, "Test desc");
     assert!(html.is_empty());
@@ -53,8 +51,7 @@ fn no_closing_dashes_treats_rest_as_yaml() {
 fn windows_line_endings() {
     let input = "---\r\ntitle: Win\r\ndesc: Win desc\r\n---\r\n# Content";
     let renderer = MockMarkdownRenderer::identity();
-    let (fm, html) =
-        parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();
+    let (fm, html) = parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();
     assert_eq!(fm.title, "Win");
     assert_eq!(fm.desc, "Win desc");
     assert_eq!(html, "# Content");
