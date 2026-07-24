@@ -277,10 +277,10 @@ impl SiteBuilder {
     pub fn build(mut self) -> Result<Site, RawssgError> {
         self.config.validate()?;
 
-        if self.content_dir == PathBuf::from("content") {
+        if self.content_dir == Path::new("content") {
             self.content_dir = PathBuf::from(&self.config.build.content_dir);
         }
-        if self.output_dir == PathBuf::from("dist") {
+        if self.output_dir == Path::new("dist") {
             self.output_dir = PathBuf::from(&self.config.build.output_dir);
         }
 
@@ -392,5 +392,11 @@ impl SiteBuilder {
             }
         }
         "page".into()
+    }
+}
+
+impl Default for SiteBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }

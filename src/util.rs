@@ -9,7 +9,7 @@ fn normalize_path(path: &Path) -> PathBuf {
             Component::ParentDir => {
                 if components
                     .last()
-                    .map_or(false, |c: &Component| c != &Component::RootDir)
+                    .is_some_and(|c: &Component| c != &Component::RootDir)
                 {
                     components.pop();
                 }
@@ -50,13 +50,14 @@ pub fn safe_path(
             ))
         })?
     } else {
-        if let Some(parent) = normalized.parent() {
-            if !parent.starts_with(&base_canon) && parent != base_canon {
-                return Err(RawssgError::PathTraversal(format!(
-                    "Path escapes base: {}",
-                    normalized.display()
-                )));
-            }
+        if let Some(parent) = normalized.parent()
+            && !parent.starts_with(&base_canon)
+            && parent != base_canon
+        {
+            return Err(RawssgError::PathTraversal(format!(
+                "Path escapes base: {}",
+                normalized.display()
+            )));
         }
         normalized
     };

@@ -21,10 +21,9 @@ fn safe_path_outside_base() {
     std::fs::create_dir(&base).unwrap();
     let base = base.canonicalize().unwrap();
 
-    // Create a file outside the base directory but inside the temp dir
     let outside = dir.path().join("outside.txt");
     std::fs::write(&outside, "test").unwrap();
-    let outside = outside.canonicalize().unwrap(); // now works because the file exists
+    let outside = outside.canonicalize().unwrap();
 
     match safe_path(&RealFs, &base, &outside) {
         Err(RawssgError::PathTraversal(_)) => {}
@@ -78,6 +77,5 @@ fn match_pattern_too_long() {
 
 #[test]
 fn match_pattern_empty_pattern() {
-    // Should not match non-empty path
     assert!(!match_pattern("", Path::new("anything")));
 }
