@@ -657,7 +657,7 @@ A comprehensive mock filesystem (`MockFs`) and mock renderers are provided in `t
 
 ## Contributing
 
-Please read [`CONTRIBUTING`](CONTRIBUTING) for guidelines on code style, commit messages, and the pull request process.
+Please read [`CONTRIBUTING`](CONTRIBUTING.md) for guidelines on code style, commit messages, and the pull request process.
 
 ---
 
