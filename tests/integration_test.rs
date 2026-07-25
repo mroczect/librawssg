@@ -1,5 +1,5 @@
 use librawssg::site::builder::SiteBuilder;
-use librawssg::types::RawssgConfig;
+use librawssg::types::{ContentTypeDef, RawssgConfig};
 use std::fs;
 use tempfile::tempdir;
 
@@ -33,6 +33,14 @@ fn full_site_generation() {
     config.build.content_dir = content.to_string_lossy().into();
     config.build.output_dir = output.to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
+
+    config.content_types.push(ContentTypeDef {
+        name: "page".into(),
+        pattern: "**/*.md".into(),
+        template: "base.html".into(),
+        list_template: None,
+        list_enabled: false,
+    });
 
     let site = SiteBuilder::new()
         .config(config)
@@ -68,6 +76,14 @@ fn draft_not_in_output() {
     config.build.content_dir = content.to_string_lossy().into();
     config.build.output_dir = output.to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
+
+    config.content_types.push(ContentTypeDef {
+        name: "page".into(),
+        pattern: "**/*.md".into(),
+        template: "base.html".into(),
+        list_template: None,
+        list_enabled: false,
+    });
 
     let site = SiteBuilder::new().config(config).build().unwrap();
     site.generate().unwrap();
