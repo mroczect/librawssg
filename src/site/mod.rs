@@ -8,41 +8,52 @@ use crate::fs::FileSystem;
 use crate::markdown::MarkdownRenderer;
 use crate::types::PageContext;
 use std::path::Path;
-use tera::Context;
 
 pub trait TemplateRenderer: Send + Sync {
-    fn render(&self, template: &str, context: &Context) -> Result<String, RawssgError>;
-    fn add_raw_template(&mut self, name: &str, content: &str) -> Result<(), RawssgError>;
+    fn render(&self, template_name: &str, context: &dyn Context) -> Result<String, RawssgError>;
 }
 
+#[cfg(feature = "tera")]
 pub struct TeraRenderer {
     tera: tera::Tera,
 }
 
+#[cfg(feature = "tera")]
 impl TeraRenderer {
     pub fn new() -> Self {
         Self {
             tera: tera::Tera::default(),
         }
     }
-}
 
-impl Default for TeraRenderer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl TemplateRenderer for TeraRenderer {
-    fn render(&self, template: &str, context: &Context) -> Result<String, RawssgError> {
-        self.tera
-            .render(template, context)
-            .map_err(|e| RawssgError::Template(e.to_string()))
-    }
-    fn add_raw_template(&mut self, name: &str, content: &str) -> Result<(), RawssgError> {
+    pub fn add_raw_template(&mut self, name: &str, content: &str) -> Result<(), RawssgError> {
         self.tera
             .add_raw_template(name, content)
             .map_err(|e| RawssgError::Template(e.to_string()))
+    }
+}
+
+#[cfg(feature = "tera")]
+impl TemplateRenderer for TeraRenderer {
+    fn render(&self, template: &str, context: &dyn Context) -> Result<String, RawssgError> {
+        let ctx = context
+            .as_any()
+            .downcast_ref::<tera::Context>()
+            .ok_or_else(|| RawssgError::Template("Invalid context type for Tera".into()))?;
+        self.tera
+            .render(template, ctx)
+            .map_err(|e| RawssgError::Template(e.to_string()))
+    }
+}
+
+pub trait Context: Send + Sync {
+    fn as_any(&self) -> &dyn std::any::Any;
+}
+
+#[cfg(feature = "tera")]
+impl Context for tera::Context {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

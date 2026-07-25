@@ -2,11 +2,12 @@ use crate::config::ConfigLoader;
 use crate::error::RawssgError;
 use crate::fs::FileSystem;
 use crate::markdown::MarkdownRenderer;
-use crate::site::{ContentHandler, MarkdownPageHandler, StaticFileHandler, TemplateRenderer};
+use crate::site::{
+    ContentHandler, Context, MarkdownPageHandler, StaticFileHandler, TemplateRenderer,
+};
 use crate::types::{PageContext, RawssgConfig};
 use crate::util::{relative_prefix, safe_path};
 use std::path::{Path, PathBuf};
-use tera::Context;
 
 pub struct Site {
     config: RawssgConfig,
@@ -49,8 +50,7 @@ impl Site {
             if page.is_list {
                 continue;
             }
-            let mut ctx = Context::new();
-            self.fill_context(page, &mut ctx);
+            let ctx = self.build_context(page);
             let template = self.template_for_page(page);
             let html = self.renderer.render(&template, &ctx)?;
 
@@ -66,10 +66,11 @@ impl Site {
             if !page.is_list {
                 continue;
             }
-            let mut ctx = Context::new();
-            self.fill_context(page, &mut ctx);
+            let mut ctx = self.build_context(page);
             if let Some(items) = &page.list_items {
-                ctx.insert("pages", items);
+                if let Some(tera_ctx) = ctx.as_mut_any().downcast_mut::<tera::Context>() {
+                    tera_ctx.insert("pages", items);
+                }
             }
             let template = self.template_for_page(page);
             let html = self.renderer.render(&template, &ctx)?;
@@ -134,7 +135,19 @@ impl Site {
         Ok(())
     }
 
-    fn fill_context(&self, page: &PageContext, ctx: &mut Context) {
+    fn build_context(&self, page: &PageContext) -> Box<dyn Context> {
+        #[cfg(feature = "tera")]
+        {
+            let mut ctx = tera::Context::new();
+            self.fill_tera_context(page, &mut ctx);
+            return Box::new(ctx);
+        }
+        #[cfg(not(feature = "tera"))]
+        panic!("A context implementation must be provided via feature or custom setup");
+    }
+
+    #[cfg(feature = "tera")]
+    fn fill_tera_context(&self, page: &PageContext, ctx: &mut tera::Context) {
         let site = &self.config.site;
         ctx.insert("site_name", &site.site_name);
         ctx.insert(
@@ -174,7 +187,6 @@ impl Site {
         "base.html".into()
     }
 
-    #[tracing::instrument(skip(self, output_base))]
     fn copy_static_assets(&self, static_dir: &Path, output_base: &Path) -> Result<(), RawssgError> {
         for entry in self.fs.walk_dir(static_dir)? {
             let rel = entry
@@ -193,12 +205,10 @@ impl Site {
         if !self.fs.exists(&self.content_dir) {
             return Ok(());
         }
-
         for entry in self.fs.walk_dir(&self.content_dir)? {
             if entry.extension().map(|e| e == "md").unwrap_or(false) {
                 continue;
             }
-
             let rel = entry
                 .strip_prefix(&self.content_dir)
                 .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
@@ -208,7 +218,6 @@ impl Site {
             }
             self.fs.copy_file(&entry, &dest)?;
         }
-
         Ok(())
     }
 }
@@ -218,8 +227,8 @@ pub struct SiteBuilder {
     content_dir: PathBuf,
     output_dir: PathBuf,
     fs: Box<dyn FileSystem>,
-    md_renderer: Box<dyn MarkdownRenderer>,
-    renderer: Box<dyn TemplateRenderer>,
+    md_renderer: Option<Box<dyn MarkdownRenderer>>,
+    renderer: Option<Box<dyn TemplateRenderer>>,
     handlers: Vec<Box<dyn ContentHandler>>,
 }
 
@@ -230,8 +239,8 @@ impl SiteBuilder {
             content_dir: PathBuf::from("content"),
             output_dir: PathBuf::from("dist"),
             fs: Box::new(crate::fs::real::RealFs),
-            md_renderer: Box::new(crate::markdown::PulldownMarkdown),
-            renderer: Box::new(crate::site::TeraRenderer::new()),
+            md_renderer: None,
+            renderer: None,
             handlers: vec![Box::new(MarkdownPageHandler), Box::new(StaticFileHandler)],
         }
     }
@@ -240,6 +249,7 @@ impl SiteBuilder {
         self.config = config;
         self
     }
+
     pub fn load_config<P: AsRef<Path> + Send + Sync>(
         mut self,
         path: P,
@@ -248,26 +258,32 @@ impl SiteBuilder {
         self.config = loader.load()?;
         Ok(self)
     }
+
     pub fn content_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.content_dir = dir.into();
         self
     }
+
     pub fn output_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.output_dir = dir.into();
         self
     }
+
     pub fn with_fs(mut self, fs: Box<dyn FileSystem>) -> Self {
         self.fs = fs;
         self
     }
+
     pub fn with_markdown_renderer(mut self, md: Box<dyn MarkdownRenderer>) -> Self {
-        self.md_renderer = md;
+        self.md_renderer = Some(md);
         self
     }
+
     pub fn with_template_renderer(mut self, tr: Box<dyn TemplateRenderer>) -> Self {
-        self.renderer = tr;
+        self.renderer = Some(tr);
         self
     }
+
     pub fn add_handler(mut self, handler: Box<dyn ContentHandler>) -> Self {
         self.handlers.push(handler);
         self
@@ -277,22 +293,18 @@ impl SiteBuilder {
     pub fn build(mut self) -> Result<Site, RawssgError> {
         self.config.validate()?;
 
+        let md_renderer = self
+            .md_renderer
+            .ok_or_else(|| RawssgError::Config("markdown renderer not set".into()))?;
+        let renderer = self
+            .renderer
+            .ok_or_else(|| RawssgError::Config("template renderer not set".into()))?;
+
         if self.content_dir == Path::new("content") {
             self.content_dir = PathBuf::from(&self.config.build.content_dir);
         }
         if self.output_dir == Path::new("dist") {
             self.output_dir = PathBuf::from(&self.config.build.output_dir);
-        }
-
-        let templates_dir = PathBuf::from(&self.config.build.templates_dir);
-        if self.fs.exists(&templates_dir) {
-            for entry in self.fs.walk_dir(&templates_dir)? {
-                if let Ok(rel) = entry.strip_prefix(&templates_dir) {
-                    let name = rel.to_string_lossy().to_string();
-                    let content = self.fs.read_to_string(&entry)?;
-                    self.renderer.add_raw_template(&name, &content)?;
-                }
-            }
         }
 
         let base_url = self
@@ -311,15 +323,9 @@ impl SiteBuilder {
                 Ok(r) => r.to_path_buf(),
                 Err(_) => continue,
             };
-            let mut handled = false;
             for handler in &self.handlers {
                 if handler.can_handle(&rel, file_path) {
-                    match handler.process(
-                        &*self.fs,
-                        &*self.md_renderer,
-                        file_path,
-                        &self.content_dir,
-                    ) {
+                    match handler.process(&*self.fs, &*md_renderer, file_path, &self.content_dir) {
                         Ok(Some(ctx)) => {
                             let mut ctx = ctx;
                             ctx.content_type = self.determine_content_type(&rel);
@@ -333,12 +339,8 @@ impl SiteBuilder {
                             tracing::error!("Failed to process {}: {}", file_path.display(), e);
                         }
                     }
-                    handled = true;
                     break;
                 }
-            }
-            if !handled {
-                tracing::warn!("No handler for: {}", file_path.display());
             }
         }
 
@@ -380,7 +382,7 @@ impl SiteBuilder {
             output_dir: self.output_dir,
             base_url,
             fs: self.fs,
-            renderer: self.renderer,
+            renderer,
             content_dir: self.content_dir,
         })
     }
