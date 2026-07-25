@@ -119,6 +119,7 @@ Optional longer explanation.
 **Scope**: `librawssg` (for core library), `ci`, `docs`, etc.
 
 Examples:
+
 - `feat(librawssg): add support for custom content handlers`
 - `fix(librawssg): prevent path traversal when outputting files`
 - `docs(librawssg): add API reference for PageContext`
