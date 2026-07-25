@@ -15,14 +15,12 @@ pub struct RawssgConfig {
 
 impl RawssgConfig {
     pub fn validate(&self) -> Result<(), crate::error::RawssgError> {
-        // site_name WAJIB diisi (sekarang default kosong)
         if self.site.site_name.trim().is_empty() {
             return Err(crate::error::RawssgError::Config(
                 "site.name cannot be empty".into(),
             ));
         }
 
-        // Wajib ada minimal satu content type
         if self.content_types.is_empty() {
             return Err(crate::error::RawssgError::Config(
                 "at least one content_type must be defined".into(),
@@ -107,7 +105,7 @@ impl Default for GlobalConfig {
         Self {
             navbar: vec![],
             sidebar: vec![],
-            site_name: default_site_name(), // sekarang kosong
+            site_name: default_site_name(),
             description: None,
             language: Some("en".into()),
             base_url: None,
@@ -119,8 +117,7 @@ impl Default for GlobalConfig {
 }
 
 fn default_site_name() -> String {
-    // KOSONG: paksa pengguna untuk mengisi sendiri
-    String::new()
+    "rawssg".into()
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
