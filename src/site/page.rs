@@ -17,16 +17,21 @@ pub fn build_page_context(
     let safe_file_path = safe_path(fs, content_dir, file_path)?;
     let raw = fs.read_to_string(&safe_file_path)?;
 
-    let (fm, content_html) = parse_frontmatter_and_render(&raw, file_path, markdown_renderer)?;
+    let (fm, content_html) =
+        parse_frontmatter_and_render(&raw, &safe_file_path, markdown_renderer)?;
 
     if fm.draft {
-        tracing::warn!("Skipping draft: {}", file_path.display());
+        tracing::warn!("Skipping draft: {}", safe_file_path.display());
         return Ok(None);
     }
 
-    let rel_path = file_path
-        .strip_prefix(content_dir)
-        .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
+    let base_canon = fs
+        .canonicalize(content_dir)
+        .map_err(|e| RawssgError::SiteGeneration(format!("canonicalize base: {}", e)))?;
+    let rel_path = safe_file_path
+        .strip_prefix(&base_canon)
+        .map_err(|_| RawssgError::SiteGeneration("prefix not found".into()))?;
+
     let url = rel_path
         .with_extension("html")
         .to_string_lossy()
@@ -43,7 +48,7 @@ pub fn build_page_context(
         frontmatter: fm,
         content_html,
         url,
-        file_path: file_path.to_string_lossy().to_string(),
+        file_path: safe_file_path.to_string_lossy().to_string(),
         depth,
         pub_date,
         content_type: "page".into(),

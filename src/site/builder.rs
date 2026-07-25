@@ -171,7 +171,9 @@ impl Site {
         ctx.insert("base_path", &relative_prefix(page.depth));
         ctx.insert("page_title", &page.frontmatter.title);
         ctx.insert("page_desc", &page.frontmatter.desc);
+
         ctx.insert("page_content", &page.content_html);
+
         ctx.insert(
             "page_author",
             &page.frontmatter.author.as_deref().unwrap_or(""),
@@ -191,6 +193,11 @@ impl Site {
     fn template_for_page(&self, page: &PageContext) -> String {
         for ct in &self.config.content_types {
             if ct.name == page.content_type {
+                if page.is_list
+                    && let Some(ref list_tpl) = ct.list_template
+                {
+                    return list_tpl.clone();
+                }
                 return ct.template.clone();
             }
         }
@@ -337,7 +344,7 @@ impl SiteBuilder {
             };
             for handler in &self.handlers {
                 if handler.can_handle(&rel, file_path) {
-                    match handler.process(&*self.fs, &*md_renderer, file_path, &self.content_dir) {
+                    match handler.process(&*self.fs, &*md_renderer, &rel, &self.content_dir) {
                         Ok(Some(ctx)) => {
                             let mut ctx = ctx;
                             ctx.content_type = self.determine_content_type(&rel);
@@ -377,7 +384,10 @@ impl SiteBuilder {
                         file_path: String::new(),
                         depth: 1,
                         pub_date: None,
-                        frontmatter: Default::default(),
+                        frontmatter: crate::types::PageFrontMatter {
+                            title: ct.name.clone(),
+                            ..Default::default()
+                        },
                         content_html: String::new(),
                         content_type: ct.name.clone(),
                         is_list: true,

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ page_title }}</h2>
+<ul>
+{% for post in pages %}
+    <li>
+        <a href="{{ base_path }}{{ post.url }}">{{ post.frontmatter.title }}</a>
+        <span>({{ post.pub_date }})</span>
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}
