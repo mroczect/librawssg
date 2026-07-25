@@ -13,6 +13,11 @@ pub trait TemplateRenderer: Send + Sync {
     fn render(&self, template_name: &str, context: &dyn Context) -> Result<String, RawssgError>;
 }
 
+pub trait Context: Send + Sync {
+    fn as_any(&self) -> &dyn std::any::Any;
+    fn as_mut_any(&mut self) -> &mut dyn std::any::Any;
+}
+
 #[cfg(feature = "tera")]
 pub struct TeraRenderer {
     tera: tera::Tera,
@@ -34,6 +39,13 @@ impl TeraRenderer {
 }
 
 #[cfg(feature = "tera")]
+impl Default for TeraRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(feature = "tera")]
 impl TemplateRenderer for TeraRenderer {
     fn render(&self, template: &str, context: &dyn Context) -> Result<String, RawssgError> {
         let ctx = context
@@ -46,13 +58,12 @@ impl TemplateRenderer for TeraRenderer {
     }
 }
 
-pub trait Context: Send + Sync {
-    fn as_any(&self) -> &dyn std::any::Any;
-}
-
 #[cfg(feature = "tera")]
 impl Context for tera::Context {
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_mut_any(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
@@ -69,13 +80,11 @@ pub trait ContentHandler: Send + Sync {
 }
 
 pub struct MarkdownPageHandler;
-
 impl ContentHandler for MarkdownPageHandler {
     fn can_handle(&self, _rel: &Path, orig: &Path) -> bool {
         orig.extension().is_some_and(|e| e == "md")
     }
 
-    #[tracing::instrument(skip(self, fs, md_renderer))]
     fn process(
         &self,
         fs: &dyn FileSystem,
@@ -88,12 +97,10 @@ impl ContentHandler for MarkdownPageHandler {
 }
 
 pub struct StaticFileHandler;
-
 impl ContentHandler for StaticFileHandler {
     fn can_handle(&self, _rel: &Path, _orig: &Path) -> bool {
         true
     }
-
     fn process(
         &self,
         _fs: &dyn FileSystem,

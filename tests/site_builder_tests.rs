@@ -1,3 +1,5 @@
+mod common;
+use common::{MockMarkdownRenderer, MockTemplateRenderer};
 use librawssg::site::builder::SiteBuilder;
 use librawssg::types::{ContentTypeDef, RawssgConfig};
 use std::fs;
@@ -53,6 +55,8 @@ fn build_simple_site() {
 
     let site = SiteBuilder::new()
         .config(config)
+        .with_template_renderer(Box::new(MockTemplateRenderer::new()))
+        .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
         .build()
         .expect("build should succeed");
 
@@ -80,7 +84,12 @@ fn draft_skipped_during_build() {
     config.build.output_dir = dir.path().join("dist").to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
 
-    let site = SiteBuilder::new().config(config).build().unwrap();
+    let site = SiteBuilder::new()
+        .config(config)
+        .with_template_renderer(Box::new(MockTemplateRenderer::new()))
+        .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
+        .build()
+        .unwrap();
     assert!(site.pages().is_empty());
 }
 
@@ -112,7 +121,12 @@ fn blog_list_page_generated() {
     config.build.output_dir = dir.path().join("dist").to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
 
-    let site = SiteBuilder::new().config(config).build().unwrap();
+    let site = SiteBuilder::new()
+        .config(config)
+        .with_template_renderer(Box::new(MockTemplateRenderer::new()))
+        .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
+        .build()
+        .unwrap();
 
     assert_eq!(site.pages().len(), 3);
     let list = site.pages().iter().find(|p| p.is_list).unwrap();
@@ -141,7 +155,13 @@ fn generate_output_files_basic() {
     config.build.output_dir = output.to_string_lossy().into();
     config.build.templates_dir = templates.to_string_lossy().into();
 
-    let site = SiteBuilder::new().config(config).build().unwrap();
+    let site = SiteBuilder::new()
+        .config(config)
+        .with_template_renderer(Box::new(MockTemplateRenderer::new()))
+        .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
+        .build()
+        .unwrap();
     site.generate().expect("generate failed");
+    // File akan dibuat, meski kontennya dari mock (format "rendered:base.html")
     assert!(output.join("about.html").exists());
 }

@@ -25,3 +25,8 @@ default = []
 tera = ["dep:tera"]
 pulldown = ["dep:pulldown-cmark"]
 serve = ["dep:tiny_http", "dep:notify"]
+
+[dev-dependencies]
+pulldown-cmark = "0.13"
+tempfile = "3.27.0"
+tera = "2"

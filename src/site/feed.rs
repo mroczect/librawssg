@@ -1,8 +1,11 @@
+#[cfg(feature = "tera")]
 use crate::error::RawssgError;
+#[cfg(feature = "tera")]
 use crate::site::TemplateRenderer;
+#[cfg(feature = "tera")]
 use crate::types::{PageContext, RawssgConfig};
-use tera::Context;
 
+#[cfg(feature = "tera")]
 #[tracing::instrument(skip(renderer))]
 pub fn generate_feed(
     renderer: &dyn TemplateRenderer,
@@ -10,7 +13,7 @@ pub fn generate_feed(
     posts: &[&PageContext],
     base_url: &str,
 ) -> Result<String, RawssgError> {
-    let mut ctx = Context::new();
+    let mut ctx = tera::Context::new();
     ctx.insert("site", &config.site);
     ctx.insert("posts", posts);
     ctx.insert("base_url", base_url);

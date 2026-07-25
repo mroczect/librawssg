@@ -4,12 +4,11 @@ use librawssg::config::ConfigLoader;
 use librawssg::error::RawssgError;
 use librawssg::fs::FileSystem;
 use librawssg::markdown::MarkdownRenderer;
-use librawssg::site::TemplateRenderer;
+use librawssg::site::{Context, TemplateRenderer};
 use librawssg::types::RawssgConfig;
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
-use tera::Context;
 
 pub struct MockFs {
     pub files: HashMap<PathBuf, Vec<u8>>,
@@ -113,6 +112,7 @@ impl FileSystem for MockFs {
             .cloned()
             .collect())
     }
+
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
         let absolute = if path.is_absolute() {
             path.to_path_buf()
@@ -167,7 +167,7 @@ impl MarkdownRenderer for MockMarkdownRenderer {
 #[allow(clippy::type_complexity)]
 pub struct MockTemplateRenderer {
     pub templates: HashMap<String, String>,
-    pub render_fn: Box<dyn Fn(&str, &Context) -> Result<String, RawssgError> + Send + Sync>,
+    pub render_fn: Box<dyn Fn(&str, &dyn Context) -> Result<String, RawssgError> + Send + Sync>,
 }
 
 impl MockTemplateRenderer {
@@ -178,7 +178,9 @@ impl MockTemplateRenderer {
         }
     }
 
-    pub fn with_fn<F: Fn(&str, &Context) -> Result<String, RawssgError> + Send + Sync + 'static>(
+    pub fn with_fn<
+        F: Fn(&str, &dyn Context) -> Result<String, RawssgError> + Send + Sync + 'static,
+    >(
         f: F,
     ) -> Self {
         Self {
@@ -186,16 +188,15 @@ impl MockTemplateRenderer {
             render_fn: Box::new(f),
         }
     }
+
+    pub fn add_raw_template(&mut self, name: &str, content: &str) {
+        self.templates.insert(name.to_string(), content.to_string());
+    }
 }
 
 impl TemplateRenderer for MockTemplateRenderer {
-    fn render(&self, template: &str, context: &Context) -> Result<String, RawssgError> {
+    fn render(&self, template: &str, context: &dyn Context) -> Result<String, RawssgError> {
         (self.render_fn)(template, context)
-    }
-
-    fn add_raw_template(&mut self, name: &str, content: &str) -> Result<(), RawssgError> {
-        self.templates.insert(name.to_string(), content.to_string());
-        Ok(())
     }
 }
 
