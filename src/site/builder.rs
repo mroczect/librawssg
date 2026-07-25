@@ -158,22 +158,13 @@ impl Site {
 
     #[cfg(feature = "tera")]
     fn fill_tera_context(&self, page: &PageContext, ctx: &mut tera::Context) {
-        let site = &self.config.site;
-        ctx.insert("site_name", &site.site_name);
-        ctx.insert(
-            "site_description",
-            &site.description.as_deref().unwrap_or(""),
-        );
-        ctx.insert("site_language", &site.language.as_deref().unwrap_or("en"));
-        ctx.insert("site_author", &site.author.as_deref().unwrap_or(""));
-        ctx.insert("site_license", &site.license.as_deref().unwrap_or(""));
+        ctx.insert("site", &self.config.site);
+
         ctx.insert("base_url", &self.base_url);
         ctx.insert("base_path", &relative_prefix(page.depth));
         ctx.insert("page_title", &page.frontmatter.title);
         ctx.insert("page_desc", &page.frontmatter.desc);
-
         ctx.insert("page_content", &page.content_html);
-
         ctx.insert(
             "page_author",
             &page.frontmatter.author.as_deref().unwrap_or(""),
@@ -193,10 +184,10 @@ impl Site {
     fn template_for_page(&self, page: &PageContext) -> String {
         for ct in &self.config.content_types {
             if ct.name == page.content_type {
-                if page.is_list
-                    && let Some(ref list_tpl) = ct.list_template
-                {
-                    return list_tpl.clone();
+                if page.is_list {
+                    if let Some(ref list_tpl) = ct.list_template {
+                        return list_tpl.clone();
+                    }
                 }
                 return ct.template.clone();
             }

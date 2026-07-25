@@ -1,0 +1,17 @@
+body {
+  font-family: sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+header {
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 1rem;
+}
+footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ccc;
+  font-size: 0.8rem;
+  color: #666;
+}
