@@ -2,8 +2,10 @@ pub trait MarkdownRenderer: Send + Sync {
     fn render(&self, markdown: &str) -> String;
 }
 
+#[cfg(feature = "pulldown")]
 pub struct PulldownMarkdown;
 
+#[cfg(feature = "pulldown")]
 impl MarkdownRenderer for PulldownMarkdown {
     fn render(&self, md: &str) -> String {
         use pulldown_cmark::{Options, Parser, html};
