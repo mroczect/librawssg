@@ -1,9 +1,19 @@
 site:
   site_name: "My librawssg Site"
   description: "A static site built with librawssg"
-  language: "en"
+  language: "id"
   base_url: "https://example.com"
   author: "Your Name"
+  navbar:
+    - label: "Beranda"
+      url: "/"
+    - label: "Tentang"
+      url: "/about.html"
+    - label: "Blog"
+      url: "/blog/index.html"
+  sidebar:
+    - label: "RSS"
+      url: "/rss.xml"
 
 build:
   content_dir: "content"
@@ -16,7 +26,6 @@ content_types:
     pattern: "*.md"
     template: "base.html"
     list_enabled: false
-
   - name: "blog"
     pattern: "blog/*.md"
     template: "blog_post.html"
