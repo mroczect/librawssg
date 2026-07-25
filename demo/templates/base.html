@@ -1,23 +1,34 @@
-<!DOCTYPE html>
-<html lang="{{ site_language }}">
-<head>
-    <meta charset="utf-8">
-    <title>{{ page_title }} - {{ site_name }}</title>
-    <meta name="description" content="{{ page_desc }}">
-    <link rel="stylesheet" href="{{ base_path }}style.css">
-</head>
-<body>
+<!doctype html>
+<html lang="{{ site.language }}">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ page_title }} - {{ site.site_name }}</title>
+    <meta name="description" content="{{ page_desc }}" />
+    <link rel="stylesheet" href="{{ base_path }}style.css" />
+  </head>
+  <body>
     <header>
-        <h1><a href="{{ base_path }}index.html">{{ site_name }}</a></h1>
+      <h1><a href="{{ base_path }}index.html">{{ site.site_name }}</a></h1>
+      <nav>
+        {% for item in site.navbar %}
+        <a href="{{ item.url }}">{{ item.label }}</a>
+        {% endfor %}
+      </nav>
     </header>
+    {% if site.sidebar %}
+    <aside>
+      {% for item in site.sidebar %}
+      <a href="{{ item.url }}">{{ item.label }}</a>
+      {% endfor %}
+    </aside>
+    {% endif %}
     <main>
-        {% block content %}
-        <h2>{{ page_title }}</h2>
-        {{ page_content | safe }}
-        {% endblock %}
+      {% block content %}
+      <h2>{{ page_title }}</h2>
+      {{ page_content | safe }} {% endblock %}
     </main>
     <footer>
-        <small>Built with librawssg</small>
+      <small>Dibuat dengan librawssg</small>
     </footer>
-</body>
+  </body>
 </html>
