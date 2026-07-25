@@ -106,4 +106,47 @@ mod integration_tests {
 
         assert!(!output.join("draft.html").exists());
     }
+    #[test]
+    fn generate_output_files_basic() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        let output = dir.path().join("dist");
+        fs::create_dir(&content).unwrap();
+        fs::create_dir(&templates).unwrap();
+
+        fs::write(
+            content.join("about.md"),
+            "---\ntitle: About\ndesc: x\n---\nAbout content",
+        )
+        .unwrap();
+
+        let mut tera = TeraRenderer::new();
+        tera.add_raw_template("base.html", "{{ page_content }}")
+            .unwrap();
+        let md = PulldownMarkdown;
+
+        let mut config = RawssgConfig::default();
+        config.build.content_dir = content.to_string_lossy().into();
+        config.build.output_dir = output.to_string_lossy().into();
+        config.build.templates_dir = templates.to_string_lossy().into();
+
+        config.content_types.push(ContentTypeDef {
+            name: "page".into(),
+            pattern: "**/*.md".into(),
+            template: "base.html".into(),
+            list_template: None,
+            list_enabled: false,
+        });
+
+        let site = SiteBuilder::new()
+            .config(config)
+            .with_template_renderer(Box::new(tera))
+            .with_markdown_renderer(Box::new(md))
+            .build()
+            .unwrap();
+        site.generate().expect("generate failed");
+
+        assert!(output.join("about.html").exists());
+    }
 }

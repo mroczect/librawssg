@@ -133,35 +133,3 @@ fn blog_list_page_generated() {
     assert_eq!(list.url, "blog/index.html");
     assert_eq!(list.list_items.as_ref().unwrap().len(), 2);
 }
-
-#[test]
-fn generate_output_files_basic() {
-    let dir = tempdir().unwrap();
-    let content = dir.path().join("content");
-    let templates = dir.path().join("templates");
-    let output = dir.path().join("dist");
-    fs::create_dir(&content).unwrap();
-    fs::create_dir(&templates).unwrap();
-
-    fs::write(
-        content.join("about.md"),
-        "---\ntitle: About\ndesc: x\n---\nAbout content",
-    )
-    .unwrap();
-    fs::write(templates.join("base.html"), "{{ page_content }}").unwrap();
-
-    let mut config = make_config();
-    config.build.content_dir = content.to_string_lossy().into();
-    config.build.output_dir = output.to_string_lossy().into();
-    config.build.templates_dir = templates.to_string_lossy().into();
-
-    let site = SiteBuilder::new()
-        .config(config)
-        .with_template_renderer(Box::new(MockTemplateRenderer::new()))
-        .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
-        .build()
-        .unwrap();
-    site.generate().expect("generate failed");
-    // File akan dibuat, meski kontennya dari mock (format "rendered:base.html")
-    assert!(output.join("about.html").exists());
-}

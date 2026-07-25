@@ -69,11 +69,12 @@ impl Site {
             if !page.is_list {
                 continue;
             }
+            #[allow(unused_mut)]
             let mut ctx = self.build_context(page);
             if let Some(_items) = &page.list_items {
                 #[cfg(feature = "tera")]
                 if let Some(tera_ctx) = ctx.as_mut_any().downcast_mut::<tera::Context>() {
-                    tera_ctx.insert("pages", items);
+                    tera_ctx.insert("pages", _items);
                 }
             }
             let template = self.template_for_page(page);
