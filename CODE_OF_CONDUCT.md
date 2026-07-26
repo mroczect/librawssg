@@ -1,198 +1,128 @@
-# Contributing to arctgz
+# Contributor Covenant Code of Conduct
 
-Thank you for your interest in contributing to arctgz. This document outlines the process for reporting issues, proposing changes, and submitting code contributions. Following these guidelines helps maintain the quality and consistency of the project.
+## Our Pledge
 
----
+We as members, contributors, and leaders pledge to make participation in our
+community a harassment-free experience for everyone, regardless of age, body
+size, visible or invisible disability, ethnicity, sex characteristics, gender
+identity and expression, level of experience, education, socio-economic status,
+nationality, personal appearance, race, religion, or sexual identity
+and orientation.
 
-## Table of Contents
+We pledge to act and interact in ways that contribute to an open, welcoming,
+diverse, inclusive, and healthy community.
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Environment](#development-environment)
-- [Building and Testing](#building-and-testing)
-- [Coding Style](#coding-style)
-- [Commit Messages](#commit-messages)
-- [Pull Request Process](#pull-request-process)
-- [Reporting Bugs](#reporting-bugs)
-- [Feature Requests](#feature-requests)
-- [Documentation](#documentation)
-- [Community](#community)
+## Our Standards
 
----
+Examples of behavior that contributes to a positive environment for our
+community include:
 
-## Code of Conduct
+* Demonstrating empathy and kindness toward other people
+* Being respectful of differing opinions, viewpoints, and experiences
+* Giving and gracefully accepting constructive feedback
+* Accepting responsibility and apologizing to those affected by our mistakes,
+  and learning from the experience
+* Focusing on what is best not just for us as individuals, but for the
+  overall community
 
-This project adheres to a minimal set of social rules: be respectful, constructive, and inclusive. Harassment, discrimination, or hostile behaviour is not tolerated. If you experience or witness such conduct, please contact the maintainers.
+Examples of unacceptable behavior include:
 
----
+* The use of sexualized language or imagery, and sexual attention or
+  advances of any kind
+* Trolling, insulting or derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others' private information, such as a physical or email
+  address, without their explicit permission
+* Other conduct which could reasonably be considered inappropriate in a
+  professional setting
 
-## Getting Started
+## Enforcement Responsibilities
 
-1. **Fork the repository** on GitHub.
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/arctgz.git
-   cd arctgz
-   ```
-3. **Add the upstream remote** to keep your fork in sync:
-   ```bash
-   git remote add upstream https://github.com/mroczect/arctgz.git
-   ```
-4. **Create a branch** for your work:
-   ```bash
-   git checkout -b feat/my-feature
-   ```
+Community leaders are responsible for clarifying and enforcing our standards of
+acceptable behavior and will take appropriate and fair corrective action in
+response to any behavior that they deem inappropriate, threatening, offensive,
+or harmful.
 
----
+Community leaders have the right and responsibility to remove, edit, or reject
+comments, commits, code, wiki edits, issues, and other contributions that are
+not aligned to this Code of Conduct, and will communicate reasons for moderation
+decisions when appropriate.
 
-## Development Environment
+## Scope
 
-- **Rust**: Install the latest stable Rust toolchain via [rustup](https://rustup.rs/).
-- **Dependencies**: The project uses several crates (`flate2`, `sha2`, `ed25519-dalek`, etc.). They will be fetched automatically by Cargo.
-- **OS support**: Development is primarily on Linux, but the library is tested on macOS and Windows. Ensure cross-platform compatibility for any new code (avoid platform-specific assumptions unless properly guarded with `#[cfg]`).
-- **Optional tools**:
-  - `groff` – for rendering the man page locally (optional).
-  - `cross` – for 32-bit testing (see CI workflow).
-  - `snapcat` – used internally by maintainers to generate code snapshots.
+This Code of Conduct applies within all community spaces, and also applies when
+an individual is officially representing the community in public spaces.
+Examples of representing our community include using an official e-mail address,
+posting via an official social media account, or acting as an appointed
+representative at an online or offline event.
 
----
+## Enforcement
 
-## Building and Testing
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported to the community leaders responsible for enforcement at
+mroczect@proton.me.
+All complaints will be reviewed and investigated promptly and fairly.
 
-All commands below are run from the repository root.
+All community leaders are obligated to respect the privacy and security of the
+reporter of any incident.
 
-### Build
+## Enforcement Guidelines
 
-```bash
-cargo build
-```
+Community leaders will follow these Community Impact Guidelines in determining
+the consequences for any action they deem in violation of this Code of Conduct:
 
-To build with optimisations:
+### 1. Correction
 
-```bash
-cargo build --release
-```
+**Community Impact**: Use of inappropriate language or other behavior deemed
+unprofessional or unwelcome in the community.
 
-### Run tests
+**Consequence**: A private, written warning from community leaders, providing
+clarity around the nature of the violation and an explanation of why the
+behavior was inappropriate. A public apology may be requested.
 
-```bash
-cargo test
-```
+### 2. Warning
 
-This runs unit tests, integration tests (located in `tests/`), and doc-tests. All tests must pass before a pull request is accepted.
+**Community Impact**: A violation through a single incident or series
+of actions.
 
-### Lint and format
+**Consequence**: A warning with consequences for continued behavior. No
+interaction with the people involved, including unsolicited interaction with
+those enforcing the Code of Conduct, for a specified period of time. This
+includes avoiding interactions in community spaces as well as external channels
+like social media. Violating these terms may lead to a temporary or
+permanent ban.
 
-```bash
-cargo fmt --all -- --check
-cargo clippy -- -D warnings
-```
+### 3. Temporary Ban
 
-These are enforced in CI. Run them locally to avoid surprises.
+**Community Impact**: A serious violation of community standards, including
+sustained inappropriate behavior.
 
-### Man page
+**Consequence**: A temporary ban from any sort of interaction or public
+communication with the community for a specified period of time. No public or
+private interaction with the people involved, including unsolicited interaction
+with those enforcing the Code of Conduct, is allowed during this period.
+Violating these terms may lead to a permanent ban.
 
-The man page source is `manual/arctgz.7`. You can render it to a terminal for inspection:
+### 4. Permanent Ban
 
-```bash
-man ./manual/arctgz.7
-```
+**Community Impact**: Demonstrating a pattern of violation of community
+standards, including sustained inappropriate behavior,  harassment of an
+individual, or aggression toward or disparagement of classes of individuals.
 
-If you modify the man page, ensure the formatting remains valid groff. The CI pipeline also deploys an HTML version to GitHub Pages via `docs.yml`.
+**Consequence**: A permanent ban from any sort of public interaction within
+the community.
 
----
+## Attribution
 
-## Coding Style
+This Code of Conduct is adapted from the [Contributor Covenant][homepage],
+version 2.0, available at
+https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
 
-- Follow the standard Rust formatting (enforced by `cargo fmt`).
-- Use `rustc` and `clippy` lints strictly; any warning is treated as an error in CI.
-- Write idiomatic Rust:
-  - Use `Result` and `Option` appropriately.
-  - Prefer `From` implementations for error conversions.
-  - Document public API items with `///` comments, including safety considerations for `unsafe` blocks (if any).
-- Keep functions small and focused.
-- Add tests for new functionality.
-- For FFI or platform-specific code, guard with `#[cfg(...)]` attributes.
+Community Impact Guidelines were inspired by [Mozilla's code of conduct
+enforcement ladder](https://github.com/mozilla/diversity).
 
----
+[homepage]: https://www.contributor-covenant.org
 
-## Commit Messages
-
-Use [conventional commit](https://www.conventionalcommits.org/) format:
-
-```
-type(scope): short description
-
-Optional longer explanation.
-```
-
-**Types**: `feat`, `fix`, `docs`, `test`, `ci`, `chore`, `refactor`, `style`.
-
-**Scope**: `arctgz` (for core library), `ffi`, `ci`, `docs`, etc.
-
-Examples:
-
-- `feat(arctgz): add encryption support via aes-gcm`
-- `fix(arctgz): handle empty directory entries correctly`
-- `docs(arctgz): update man page for v0.8.0`
-
-This format enables automatic changelog generation and clear history.
-
----
-
-## Pull Request Process
-
-1. Ensure your branch is based on an up-to-date `master`.
-2. Run `cargo test`, `cargo fmt --all -- --check`, and `cargo clippy -- -D warnings` to verify there are no issues.
-3. If you added or modified public API, update the man page (`manual/arctgz.7`) and README as necessary.
-4. Push your branch and open a pull request against the `master` branch of the main repository.
-5. In the PR description:
-   - Explain what the change does and why.
-   - Mention any breaking changes.
-   - Link to any related issues.
-   - Note if documentation updates are included.
-6. The CI will run automatically. All checks must be green.
-7. A maintainer will review your code. Please respond to feedback and make requested changes.
-8. Once approved, the PR will be merged via squash merge to keep the history linear.
-
----
-
-## Reporting Bugs
-
-Open an issue on GitHub and include:
-
-- A clear description of the problem.
-- Steps to reproduce.
-- Expected vs actual behaviour.
-- Environment details: OS, Rust version (`rustc --version`), arctgz version or commit hash.
-- If applicable, a minimal code example that demonstrates the bug.
-
----
-
-## Feature Requests
-
-Feature requests are welcome. When opening an issue:
-
-- Describe the feature and the problem it solves.
-- Explain how it fits into the library's scope.
-- Be open to discussion about design and implementation.
-
-For large features, consider opening an issue first to gather feedback before writing code.
-
----
-
-## Documentation
-
-- The primary API documentation is the man page (`manual/arctgz.7`). Use `groff` syntax.
-- The README serves as a quick overview.
-- Release notes are created in `RELEASE_NOTES.md` for each version (by maintainers).
-- If you add a new public type or function, update the man page accordingly. Examples in the man page should be complete and correct.
-
----
-
-## Community
-
-- The main communication channel is GitHub issues and pull requests.
-- For questions or informal discussion, you can reach out via the repository's Discussions tab if enabled.
-
-Thank you for contributing to arctgz. Your effort helps make the project better for everyone.
+For answers to common questions about this code of conduct, see the FAQ at
+https://www.contributor-covenant.org/faq. Translations are available at
+https://www.contributor-covenant.org/translations.
