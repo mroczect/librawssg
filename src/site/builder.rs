@@ -2,6 +2,8 @@ use crate::config::ConfigLoader;
 use crate::error::RawssgError;
 use crate::fs::FileSystem;
 use crate::markdown::MarkdownRenderer;
+#[cfg(feature = "tera")]
+use crate::site::context::{FeedContextBuilder, SitemapContextBuilder};
 use crate::site::{
     ContentHandler, Context, MarkdownPageHandler, StaticFileHandler, TemplateRenderer,
 };
@@ -20,6 +22,10 @@ pub struct Site {
     fs: Box<dyn FileSystem>,
     renderer: Box<dyn TemplateRenderer>,
     content_dir: PathBuf,
+    #[cfg(feature = "tera")]
+    feed_context_builder: Box<dyn FeedContextBuilder>,
+    #[cfg(feature = "tera")]
+    sitemap_context_builder: Box<dyn SitemapContextBuilder>,
 }
 
 impl Site {
@@ -49,6 +55,7 @@ impl Site {
     fn generate_to(&self, output_base: &Path) -> Result<(), RawssgError> {
         self.fs.create_dir_all(output_base)?;
 
+        // Render regular pages
         for page in &self.pages {
             if page.is_list {
                 continue;
@@ -65,6 +72,7 @@ impl Site {
             self.fs.write(&out_path, html.as_bytes())?;
         }
 
+        // Render list pages
         for page in &self.pages {
             if !page.is_list {
                 continue;
@@ -88,12 +96,14 @@ impl Site {
             self.fs.write(&out_path, html.as_bytes())?;
         }
 
+        // Static assets
         let static_dir = Path::new(&self.config.build.static_dir);
         if self.fs.exists(static_dir) {
             self.copy_static_assets(static_dir, output_base)?;
         }
         self.copy_content_assets(output_base)?;
 
+        // RSS and Sitemap (with custom context builders)
         #[cfg(feature = "tera")]
         {
             if self.config.generators.rss.enabled {
@@ -108,6 +118,7 @@ impl Site {
                         &self.config,
                         &blog_posts,
                         &self.base_url,
+                        &*self.feed_context_builder,
                     )?;
                     let feed_path = safe_path(
                         self.fs.as_ref(),
@@ -124,8 +135,10 @@ impl Site {
             if self.config.generators.sitemap.enabled {
                 let sitemap = crate::site::sitemap::generate_sitemap(
                     &*self.renderer,
+                    &self.config,
                     &self.pages,
                     &self.base_url,
+                    &*self.sitemap_context_builder,
                 )?;
                 let sitemap_path = safe_path(
                     self.fs.as_ref(),
@@ -159,7 +172,6 @@ impl Site {
     #[cfg(feature = "tera")]
     fn fill_tera_context(&self, page: &PageContext, ctx: &mut tera::Context) {
         ctx.insert("site", &self.config.site);
-
         ctx.insert("base_url", &self.base_url);
         ctx.insert("base_path", &relative_prefix(page.depth));
         ctx.insert("page_title", &page.frontmatter.title);
@@ -184,10 +196,10 @@ impl Site {
     fn template_for_page(&self, page: &PageContext) -> String {
         for ct in &self.config.content_types {
             if ct.name == page.content_type {
-                if page.is_list {
-                    if let Some(ref list_tpl) = ct.list_template {
-                        return list_tpl.clone();
-                    }
+                if page.is_list
+                    && let Some(ref list_tpl) = ct.list_template
+                {
+                    return list_tpl.clone();
                 }
                 return ct.template.clone();
             }
@@ -238,6 +250,10 @@ pub struct SiteBuilder {
     md_renderer: Option<Box<dyn MarkdownRenderer>>,
     renderer: Option<Box<dyn TemplateRenderer>>,
     handlers: Vec<Box<dyn ContentHandler>>,
+    #[cfg(feature = "tera")]
+    feed_context_builder: Option<Box<dyn FeedContextBuilder>>,
+    #[cfg(feature = "tera")]
+    sitemap_context_builder: Option<Box<dyn SitemapContextBuilder>>,
 }
 
 impl SiteBuilder {
@@ -250,6 +266,10 @@ impl SiteBuilder {
             md_renderer: None,
             renderer: None,
             handlers: vec![Box::new(MarkdownPageHandler), Box::new(StaticFileHandler)],
+            #[cfg(feature = "tera")]
+            feed_context_builder: None,
+            #[cfg(feature = "tera")]
+            sitemap_context_builder: None,
         }
     }
 
@@ -297,6 +317,18 @@ impl SiteBuilder {
         self
     }
 
+    #[cfg(feature = "tera")]
+    pub fn with_feed_context_builder(mut self, b: Box<dyn FeedContextBuilder>) -> Self {
+        self.feed_context_builder = Some(b);
+        self
+    }
+
+    #[cfg(feature = "tera")]
+    pub fn with_sitemap_context_builder(mut self, b: Box<dyn SitemapContextBuilder>) -> Self {
+        self.sitemap_context_builder = Some(b);
+        self
+    }
+
     #[tracing::instrument(skip(self))]
     pub fn build(mut self) -> Result<Site, RawssgError> {
         self.config.validate()?;
@@ -309,6 +341,17 @@ impl SiteBuilder {
             .renderer
             .take()
             .ok_or_else(|| RawssgError::Config("template renderer not set".into()))?;
+
+        #[cfg(feature = "tera")]
+        let feed_context_builder = self
+            .feed_context_builder
+            .take()
+            .ok_or_else(|| RawssgError::Config("feed context builder not set".into()))?;
+        #[cfg(feature = "tera")]
+        let sitemap_context_builder = self
+            .sitemap_context_builder
+            .take()
+            .ok_or_else(|| RawssgError::Config("sitemap context builder not set".into()))?;
 
         if self.content_dir == Path::new("content") {
             self.content_dir = PathBuf::from(&self.config.build.content_dir);
@@ -396,6 +439,10 @@ impl SiteBuilder {
             fs: self.fs,
             renderer,
             content_dir: self.content_dir,
+            #[cfg(feature = "tera")]
+            feed_context_builder,
+            #[cfg(feature = "tera")]
+            sitemap_context_builder,
         })
     }
 
