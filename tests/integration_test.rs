@@ -1,5 +1,9 @@
+mod common;
+mod common_mocks;
+
 #[cfg(all(feature = "tera", feature = "pulldown"))]
-mod integration_tests {
+mod all_tests {
+    use crate::common_mocks::context_mocks::{MockFeedContextBuilder, MockSitemapContextBuilder};
     use librawssg::markdown::PulldownMarkdown;
     use librawssg::site::TeraRenderer;
     use librawssg::site::builder::SiteBuilder;
@@ -51,13 +55,14 @@ mod integration_tests {
             .config(config)
             .with_template_renderer(Box::new(tera))
             .with_markdown_renderer(Box::new(md))
+            .with_feed_context_builder(Box::new(MockFeedContextBuilder))
+            .with_sitemap_context_builder(Box::new(MockSitemapContextBuilder))
             .build()
             .expect("build failed");
         site.generate().expect("generate failed");
 
         assert!(output.join("index.html").exists());
         assert!(output.join("about.html").exists());
-
         let home_html = fs::read_to_string(output.join("index.html")).unwrap();
         assert!(home_html.contains("Welcome!"));
         assert!(home_html.contains("<title>Home</title>"));
@@ -100,12 +105,15 @@ mod integration_tests {
             .config(config)
             .with_template_renderer(Box::new(tera))
             .with_markdown_renderer(Box::new(md))
+            .with_feed_context_builder(Box::new(MockFeedContextBuilder))
+            .with_sitemap_context_builder(Box::new(MockSitemapContextBuilder))
             .build()
             .unwrap();
         site.generate().unwrap();
 
         assert!(!output.join("draft.html").exists());
     }
+
     #[test]
     fn generate_output_files_basic() {
         let dir = tempdir().unwrap();
@@ -143,6 +151,8 @@ mod integration_tests {
             .config(config)
             .with_template_renderer(Box::new(tera))
             .with_markdown_renderer(Box::new(md))
+            .with_feed_context_builder(Box::new(MockFeedContextBuilder))
+            .with_sitemap_context_builder(Box::new(MockSitemapContextBuilder))
             .build()
             .unwrap();
         site.generate().expect("generate failed");

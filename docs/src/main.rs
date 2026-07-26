@@ -1,0 +1,48 @@
+use librawssg::markdown::PulldownMarkdown;
+use librawssg::site::builder::SiteBuilder;
+use librawssg::site::context::{TeraFeedContextBuilder, TeraSitemapContextBuilder};
+use librawssg::site::TeraRenderer;
+use std::path::Path;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let builder = SiteBuilder::new()
+        .load_config("config.yml")
+        .expect("Failed to load config.yml");
+
+    let mut tera = TeraRenderer::new();
+    let templates_dir = Path::new("templates");
+    if templates_dir.exists() {
+        for entry in std::fs::read_dir(templates_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                let name = path.file_name().unwrap().to_string_lossy().into_owned();
+                let content = std::fs::read_to_string(&path)?;
+                tera.add_raw_template(&name, &content)?;
+            }
+        }
+    }
+
+    let md = PulldownMarkdown;
+    let content_dir = Path::new("content");
+    let output_dir = Path::new("dist");
+
+    let site = builder
+        .content_dir(content_dir)
+        .output_dir(output_dir)
+        .with_template_renderer(Box::new(tera))
+        .with_markdown_renderer(Box::new(md))
+        .with_feed_context_builder(Box::new(TeraFeedContextBuilder))
+        .with_sitemap_context_builder(Box::new(TeraSitemapContextBuilder))
+        .build()?;
+
+    println!("Generated {} pages:", site.pages().len());
+    for page in site.pages() {
+        println!("  {} -> {}", page.file_path, page.url);
+    }
+
+    site.generate()?;
+    println!("\nDocumentation built successfully in {}", output_dir.display());
+
+    Ok(())
+}

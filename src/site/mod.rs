@@ -19,6 +19,9 @@ pub trait Context: Send + Sync {
 }
 
 #[cfg(feature = "tera")]
+pub mod context;
+
+#[cfg(feature = "tera")]
 pub struct TeraRenderer {
     tera: tera::Tera,
 }
