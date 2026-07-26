@@ -8,6 +8,35 @@
     <link rel="stylesheet" href="{{ base_path }}normalize.css">
     <link rel="stylesheet" href="{{ base_path }}sidebar.css">
     <link rel="stylesheet" href="{{ base_path }}style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+        pre {
+            border-radius: 8px;
+            padding: 0 !important;
+            margin: 1.5em 0;
+            background: #0d1117;
+            overflow-x: auto;
+        }
+        pre code.hljs {
+            padding: 1em;
+            font-size: 14px;
+            line-height: 1.6;
+            display: block;
+        }
+        :not(pre) > code {
+            background: #f0f0f0;
+            color: #d63384;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (prefers-color-scheme: dark) {
+            :not(pre) > code {
+                background: #1e1e1e;
+                color: #f08d49;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -26,7 +55,6 @@
                 </ul>
             </nav>
         </aside>
-
         <main class="content">
             <div class="container-lg px-3 my-5 markdown-body">
                 <h1>{{ page_title }}</h1>
@@ -37,5 +65,11 @@
             </footer>
         </main>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            hljs.highlightAll();
+        });
+    </script>
 </body>
 </html>
