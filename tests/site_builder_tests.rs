@@ -1,4 +1,7 @@
 mod common;
+mod common_mocks;
+#[cfg(feature = "tera")]
+use crate::common_mocks::context_mocks::{MockFeedContextBuilder, MockSitemapContextBuilder};
 use common::{MockMarkdownRenderer, MockTemplateRenderer};
 use librawssg::site::builder::SiteBuilder;
 use librawssg::types::{ContentTypeDef, RawssgConfig};
@@ -33,6 +36,7 @@ fn builder_load_config_file_not_found() {
 }
 
 #[test]
+#[cfg(feature = "tera")]
 fn build_simple_site() {
     let dir = tempdir().unwrap();
     let content = dir.path().join("content");
@@ -57,6 +61,8 @@ fn build_simple_site() {
         .config(config)
         .with_template_renderer(Box::new(MockTemplateRenderer::new()))
         .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
+        .with_feed_context_builder(Box::new(MockFeedContextBuilder))
+        .with_sitemap_context_builder(Box::new(MockSitemapContextBuilder))
         .build()
         .expect("build should succeed");
 
@@ -65,6 +71,7 @@ fn build_simple_site() {
 }
 
 #[test]
+#[cfg(feature = "tera")]
 fn draft_skipped_during_build() {
     let dir = tempdir().unwrap();
     let content = dir.path().join("content");
@@ -88,12 +95,15 @@ fn draft_skipped_during_build() {
         .config(config)
         .with_template_renderer(Box::new(MockTemplateRenderer::new()))
         .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
+        .with_feed_context_builder(Box::new(MockFeedContextBuilder))
+        .with_sitemap_context_builder(Box::new(MockSitemapContextBuilder))
         .build()
         .unwrap();
     assert!(site.pages().is_empty());
 }
 
 #[test]
+#[cfg(feature = "tera")]
 fn blog_list_page_generated() {
     let dir = tempdir().unwrap();
     let content = dir.path().join("content");
@@ -125,6 +135,8 @@ fn blog_list_page_generated() {
         .config(config)
         .with_template_renderer(Box::new(MockTemplateRenderer::new()))
         .with_markdown_renderer(Box::new(MockMarkdownRenderer::identity()))
+        .with_feed_context_builder(Box::new(MockFeedContextBuilder))
+        .with_sitemap_context_builder(Box::new(MockSitemapContextBuilder))
         .build()
         .unwrap();
 
