@@ -3,41 +3,63 @@ title: Installation
 desc: Add librawssg to your Rust project in under a minute
 ---
 
-librawssg is **not yet published on [crates.io](https://crates.io)**.  
-You can still use it today by adding the Git repository as a dependency.  
-Choose one of the methods below – they all take less than a minute.
+librawssg is **not yet published on [crates.io](https://crates.io)**, but you can still use it today directly from the Git repository.  
+All methods below take less than a minute – pick the one that fits your workflow.
 
 ---
 
 ## Prerequisites
 
 - **Rust** `1.96` or later (install via [rustup](https://rustup.rs))
-- A Cargo project with `edition = "2024"`
+- A Cargo project with `edition = "2024"` (or `2021` if you prefer)
 
 ---
 
-## Method 1: Git dependency (recommended)
+## Method 1: `cargo add` (Git dependency – recommended)
+
+If you have `cargo-edit` installed (`cargo install cargo-edit`), the fastest way is:
+
+```bash
+cargo add --git https://github.com/mroczect/librawssg.git --tag v0.4.0 librawssg
+```
+
+To also enable the built‑in Tera and pulldown‑cmark implementations (most common):
+
+```bash
+cargo add --git https://github.com/mroczect/librawssg.git --tag v0.4.0 librawssg --features tera,pulldown
+```
+
+This will add the dependency to your `Cargo.toml` automatically.
+
+---
+
+## Method 2: Manual `Cargo.toml` entry
 
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.3.0" }
+librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.4.0" }
 ```
 
-**Always pin a specific tag** (e.g. `v0.3.0`) to avoid pulling breaking changes unexpectedly.
-
-To enable the built‑in Tera and pulldown‑cmark implementations (most common):
+**Always pin a specific tag** to avoid breaking changes. To enable Tera and pulldown-cmark:
 
 ```toml
-librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.3.0", features = ["tera", "pulldown"] }
+librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.4.0", features = ["tera", "pulldown"] }
 ```
 
 ---
 
-## Method 2: Path dependency (local development)
+## Method 3: Path dependency (local development)
 
-If you cloned the repository and want to work on the library itself:
+If you cloned the repository and want to hack on the library:
+
+```bash
+git clone https://github.com/mroczect/librawssg.git
+cd librawssg
+```
+
+Then in your project’s `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -46,7 +68,7 @@ librawssg = { path = "../librawssg", features = ["tera", "pulldown"] }
 
 ---
 
-## Method 3: Full clone and build
+## Method 4: Full clone and build
 
 ```bash
 git clone https://github.com/mroczect/librawssg.git
@@ -54,7 +76,7 @@ cd librawssg
 cargo build --release
 ```
 
-Then reference it as a path dependency (see Method 2).
+Then reference it as a path dependency (see Method 3).
 
 ---
 
@@ -106,19 +128,17 @@ cargo new my-site
 cd my-site
 ```
 
-**2. Edit `Cargo.toml`**
+**2. Add the dependency (choose one method)**
 
-```toml
-[package]
-name = "my-site"
-version = "0.1.0"
-edition = "2021"
+Using `cargo add`:
 
-[dependencies]
-librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.3.0", features = ["tera", "pulldown"] }
+```bash
+cargo add --git https://github.com/mroczect/librawssg.git --tag v0.4.0 librawssg --features tera,pulldown
 ```
 
-**3. Create a minimal content file and template**
+Or edit `Cargo.toml` manually (see Method 2).
+
+**3. Create folders and a content file**
 
 ```bash
 mkdir content templates static
@@ -198,17 +218,13 @@ You should see a simple HTML page with "Welcome!" rendered from Markdown.
 
 ## Troubleshooting
 
-### `error: failed to parse manifest` when using `tag = "v0.3.0"`
+### `error: failed to parse manifest` when using a tag
 
-Make sure the tag exists on GitHub. You can also use `branch = "master"` temporarily, but **prefer a tag for stability**.
+Make sure the tag exists on GitHub (e.g., `v0.4.0`). You can also use `branch = "master"` temporarily, but **prefer a tag for stability**.
 
 ### `cannot find trait implementation` for Tera or Pulldown
 
-You forgot to enable the `tera` and `pulldown` features. Add them to your `Cargo.toml`:
-
-```toml
-features = ["tera", "pulldown"]
-```
+You forgot to enable the `tera` and `pulldown` features. Add them to your `Cargo.toml` or `cargo add` command.
 
 ### `No context implementation available` error at runtime
 
