@@ -2,6 +2,14 @@
 name = "librawssg"
 version = "0.4.0"
 edition = "2024"
+description = "Engine-agnostic, safety-first kernel for building static site generators in Rust"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+homepage = "https://github.com/mroczect/librawssg"
+documentation = "https://docs.rs/librawssg"
+readme = "README.md"
+keywords = ["static-site-generator", "ssg", "libary", "kernel", "rawssg"]
+categories = ["web-programming", "template-engine", "development-tools"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
