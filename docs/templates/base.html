@@ -3,12 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }} - {{ site.site_name }}</title>
+    <title>{{ page_title }} – {{ site.site_name }}</title>
     <meta name="description" content="{{ page_desc }}">
+
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="{{ base_path }}normalize.css">
     <link rel="stylesheet" href="{{ base_path }}sidebar.css">
     <link rel="stylesheet" href="{{ base_path }}style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+
+    <!-- Code highlighting overrides -->
     <style>
         pre {
             border-radius: 8px;
@@ -40,8 +45,11 @@
 </head>
 <body>
     <div class="wrapper">
+        <!-- Sidebar -->
         <aside class="sidebar">
-            <h2><a href="{{ base_path }}index.html">{{ site.site_name }}</a></h2>
+            <h2>
+                <a href="{{ base_path }}index.html">{{ site.site_name }}</a>
+            </h2>
             <nav>
                 <ul>
                     {% for item in site.sidebar %}
@@ -55,19 +63,28 @@
                 </ul>
             </nav>
         </aside>
+
+        <!-- Main content -->
         <main class="content">
             <div class="container-lg px-3 my-5 markdown-body">
                 <h1>{{ page_title }}</h1>
                 {{ page_content | safe }}
             </div>
+
+            <!-- Footer -->
             <footer class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
-                <small>Built with <a href="{{ site.repo_url }}">librawssg</a> &middot; Licensed under {{ site.license | default(value='MIT') }}</small>
+                <small>
+                    Built with <a href="{{ site.repo_url }}">librawssg</a>
+                    &middot; Licensed under {{ site.license | default(value='MIT') }}
+                </small>
             </footer>
         </main>
     </div>
+
+    <!-- Highlight.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             hljs.highlightAll();
         });
     </script>
