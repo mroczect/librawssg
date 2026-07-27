@@ -78,4 +78,7 @@ impl FileSystem for RealFs {
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
         path.canonicalize()
     }
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        std::fs::rename(from, to)
+    }
 }
