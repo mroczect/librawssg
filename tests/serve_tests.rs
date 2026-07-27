@@ -2,7 +2,7 @@
 use librawssg::fs::{FileSystem, real::RealFs};
 use librawssg::serve::start_dev_server;
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
 use tempfile::tempdir;
@@ -17,13 +17,21 @@ fn http_get(port: u16, path: &str) -> String {
     response
 }
 
+fn find_available_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0")
+        .expect("failed to bind")
+        .local_addr()
+        .unwrap()
+        .port()
+}
+
 #[test]
 fn server_serves_index_html() {
     let dir = tempdir().unwrap();
     let index_path = dir.path().join("index.html");
     RealFs.write(&index_path, b"<h1>Hello</h1>").unwrap();
 
-    let port = 8787u16;
+    let port = find_available_port();
     let dist = dir.path().to_path_buf();
     let server_handle = thread::spawn(move || {
         let _ = start_dev_server(&dist, port);
@@ -41,14 +49,14 @@ fn server_serves_index_html() {
 #[test]
 fn server_returns_500_for_missing_file() {
     let dir = tempdir().unwrap();
-    let port = 8789u16;
+    let port = find_available_port();
     let dist = dir.path().to_path_buf();
     let server_handle = thread::spawn(move || {
         let _ = start_dev_server(&dist, port);
     });
 
     let mut response = String::new();
-    for _ in 0..5 {
+    for _ in 0..10 {
         thread::sleep(Duration::from_millis(100));
         if let Ok(res) = std::panic::catch_unwind(|| http_get(port, "/nope.html")) {
             response = res;
@@ -58,7 +66,7 @@ fn server_returns_500_for_missing_file() {
 
     assert!(
         response.contains("500"),
-        "Expected 500 status for missing file, got: {}",
+        "Expected 500 status, got: {}",
         response
     );
 
