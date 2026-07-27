@@ -2,7 +2,6 @@ use crate::error::RawssgError;
 use crate::site::Context;
 use crate::types::{PageContext, RawssgConfig};
 
-/// Builder untuk membuat konteks RSS feed
 pub trait FeedContextBuilder: Send + Sync {
     fn build_feed_context(
         &self,
@@ -12,7 +11,6 @@ pub trait FeedContextBuilder: Send + Sync {
     ) -> Result<Box<dyn Context>, RawssgError>;
 }
 
-/// Builder untuk membuat konteks sitemap
 pub trait SitemapContextBuilder: Send + Sync {
     fn build_sitemap_context(
         &self,

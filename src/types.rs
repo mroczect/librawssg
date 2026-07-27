@@ -177,7 +177,7 @@ pub struct GeneratorsConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct GeneratorDef {
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub enabled: bool,
     #[serde(default)]
     pub path: String,
@@ -185,8 +185,8 @@ pub struct GeneratorDef {
     pub template: String,
 }
 
-fn default_true() -> bool {
-    true
+fn default_false() -> bool {
+    false
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

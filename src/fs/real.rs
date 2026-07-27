@@ -20,7 +20,7 @@ impl FileSystem for RealFs {
     #[tracing::instrument(skip(self, content))]
     fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
+            self.create_dir_all(parent)?;
         }
         fs::write(path, content)
     }

@@ -11,21 +11,22 @@ use crate::types::{PageContext, RawssgConfig};
 #[cfg(feature = "tera")]
 use crate::util::relative_prefix;
 use crate::util::safe_path;
+use std::io;
 use std::path::{Path, PathBuf};
 
 pub struct Site {
     config: RawssgConfig,
     pages: Vec<PageContext>,
     output_dir: PathBuf,
-    #[allow(dead_code)]
+    #[cfg_attr(not(feature = "tera"), allow(dead_code))]
     base_url: String,
     fs: Box<dyn FileSystem>,
     renderer: Box<dyn TemplateRenderer>,
     content_dir: PathBuf,
     #[cfg(feature = "tera")]
-    feed_context_builder: Box<dyn FeedContextBuilder>,
+    feed_context_builder: Option<Box<dyn FeedContextBuilder>>,
     #[cfg(feature = "tera")]
-    sitemap_context_builder: Box<dyn SitemapContextBuilder>,
+    sitemap_context_builder: Option<Box<dyn SitemapContextBuilder>>,
 }
 
 impl Site {
@@ -46,8 +47,18 @@ impl Site {
         if self.fs.exists(&self.output_dir) {
             self.fs.remove_dir_all(&self.output_dir)?;
         }
-        std::fs::rename(&tmp_dir, &self.output_dir)
-            .map_err(|e| RawssgError::SiteGeneration(format!("Atomic rename failed: {}", e)))?;
+        std::fs::rename(&tmp_dir, &self.output_dir).or_else(|e| {
+            if e.kind() == io::ErrorKind::CrossesDevices {
+                self.copy_dir_all(&tmp_dir, &self.output_dir)?;
+                self.fs.remove_dir_all(&tmp_dir)?;
+                Ok(())
+            } else {
+                Err(RawssgError::SiteGeneration(format!(
+                    "Atomic rename failed: {}",
+                    e
+                )))
+            }
+        })?;
 
         Ok(())
     }
@@ -55,12 +66,20 @@ impl Site {
     fn generate_to(&self, output_base: &Path) -> Result<(), RawssgError> {
         self.fs.create_dir_all(output_base)?;
 
-        // Render regular pages
+        let static_dir = self
+            .fs
+            .canonicalize(Path::new(&self.config.build.static_dir))
+            .map_err(|e| RawssgError::SiteGeneration(format!("static dir: {}", e)))?;
+        let content_dir = self
+            .fs
+            .canonicalize(&self.content_dir)
+            .map_err(|e| RawssgError::SiteGeneration(format!("content dir: {}", e)))?;
+
         for page in &self.pages {
             if page.is_list {
                 continue;
             }
-            let ctx = self.build_context(page);
+            let ctx = self.build_context(page)?;
             let template = self.template_for_page(page);
             let html = self.renderer.render(&template, &*ctx)?;
 
@@ -72,13 +91,12 @@ impl Site {
             self.fs.write(&out_path, html.as_bytes())?;
         }
 
-        // Render list pages
         for page in &self.pages {
             if !page.is_list {
                 continue;
             }
             #[allow(unused_mut)]
-            let mut ctx = self.build_context(page);
+            let mut ctx = self.build_context(page)?;
             if let Some(_items) = &page.list_items {
                 #[cfg(feature = "tera")]
                 if let Some(tera_ctx) = ctx.as_mut_any().downcast_mut::<tera::Context>() {
@@ -96,59 +114,68 @@ impl Site {
             self.fs.write(&out_path, html.as_bytes())?;
         }
 
-        // Static assets
-        let static_dir = Path::new(&self.config.build.static_dir);
-        if self.fs.exists(static_dir) {
-            self.copy_static_assets(static_dir, output_base)?;
+        if self.fs.exists(&static_dir) {
+            self.copy_static_assets(&static_dir, output_base)?;
         }
-        self.copy_content_assets(output_base)?;
+        self.copy_content_assets(&content_dir, output_base)?;
 
-        // RSS and Sitemap (with custom context builders)
         #[cfg(feature = "tera")]
         {
             if self.config.generators.rss.enabled {
-                let blog_posts: Vec<&PageContext> = self
-                    .pages
-                    .iter()
-                    .filter(|p| p.content_type == "blog" && !p.is_list)
-                    .collect();
-                if !blog_posts.is_empty() {
-                    let rss = crate::site::feed::generate_feed(
-                        &*self.renderer,
-                        &self.config,
-                        &blog_posts,
-                        &self.base_url,
-                        &*self.feed_context_builder,
-                    )?;
-                    let feed_path = safe_path(
-                        self.fs.as_ref(),
-                        output_base,
-                        Path::new(&self.config.generators.rss.path),
-                    )?;
-                    if let Some(parent) = feed_path.parent() {
-                        self.fs.create_dir_all(parent)?;
+                if let Some(ref feed_builder) = self.feed_context_builder {
+                    let blog_posts: Vec<&PageContext> = self
+                        .pages
+                        .iter()
+                        .filter(|p| p.content_type == "blog" && !p.is_list)
+                        .collect();
+                    if !blog_posts.is_empty() {
+                        let rss = crate::site::feed::generate_feed(
+                            &*self.renderer,
+                            &self.config,
+                            &blog_posts,
+                            &self.base_url,
+                            &**feed_builder,
+                        )?;
+                        let feed_path = safe_path(
+                            self.fs.as_ref(),
+                            output_base,
+                            Path::new(&self.config.generators.rss.path),
+                        )?;
+                        if let Some(parent) = feed_path.parent() {
+                            self.fs.create_dir_all(parent)?;
+                        }
+                        self.fs.write(&feed_path, rss.as_bytes())?;
                     }
-                    self.fs.write(&feed_path, rss.as_bytes())?;
+                } else {
+                    return Err(RawssgError::Internal(
+                        "RSS enabled but no feed context builder provided".into(),
+                    ));
                 }
             }
 
             if self.config.generators.sitemap.enabled {
-                let sitemap = crate::site::sitemap::generate_sitemap(
-                    &*self.renderer,
-                    &self.config,
-                    &self.pages,
-                    &self.base_url,
-                    &*self.sitemap_context_builder,
-                )?;
-                let sitemap_path = safe_path(
-                    self.fs.as_ref(),
-                    output_base,
-                    Path::new(&self.config.generators.sitemap.path),
-                )?;
-                if let Some(parent) = sitemap_path.parent() {
-                    self.fs.create_dir_all(parent)?;
+                if let Some(ref sitemap_builder) = self.sitemap_context_builder {
+                    let sitemap = crate::site::sitemap::generate_sitemap(
+                        &*self.renderer,
+                        &self.config,
+                        &self.pages,
+                        &self.base_url,
+                        &**sitemap_builder,
+                    )?;
+                    let sitemap_path = safe_path(
+                        self.fs.as_ref(),
+                        output_base,
+                        Path::new(&self.config.generators.sitemap.path),
+                    )?;
+                    if let Some(parent) = sitemap_path.parent() {
+                        self.fs.create_dir_all(parent)?;
+                    }
+                    self.fs.write(&sitemap_path, sitemap.as_bytes())?;
+                } else {
+                    return Err(RawssgError::Internal(
+                        "Sitemap enabled but no sitemap context builder provided".into(),
+                    ));
                 }
-                self.fs.write(&sitemap_path, sitemap.as_bytes())?;
             }
         }
 
@@ -156,17 +183,17 @@ impl Site {
     }
 
     #[cfg(feature = "tera")]
-    fn build_context(&self, page: &PageContext) -> Box<dyn Context> {
+    fn build_context(&self, page: &PageContext) -> Result<Box<dyn Context>, RawssgError> {
         let mut ctx = tera::Context::new();
         self.fill_tera_context(page, &mut ctx);
-        Box::new(ctx)
+        Ok(Box::new(ctx))
     }
 
     #[cfg(not(feature = "tera"))]
-    fn build_context(&self, _page: &PageContext) -> Box<dyn Context> {
-        unimplemented!(
-            "No context implementation available. Enable the 'tera' feature or provide a custom context."
-        )
+    fn build_context(&self, _page: &PageContext) -> Result<Box<dyn Context>, RawssgError> {
+        Err(RawssgError::Internal(
+            "Context builder not available without 'tera' feature".into(),
+        ))
     }
 
     #[cfg(feature = "tera")]
@@ -221,22 +248,45 @@ impl Site {
         Ok(())
     }
 
-    fn copy_content_assets(&self, output_base: &Path) -> Result<(), RawssgError> {
-        if !self.fs.exists(&self.content_dir) {
+    fn copy_content_assets(
+        &self,
+        content_dir: &Path,
+        output_base: &Path,
+    ) -> Result<(), RawssgError> {
+        if !self.fs.exists(content_dir) {
             return Ok(());
         }
-        for entry in self.fs.walk_dir(&self.content_dir)? {
+        for entry in self.fs.walk_dir(content_dir)? {
             if entry.extension().map(|e| e == "md").unwrap_or(false) {
                 continue;
             }
             let rel = entry
-                .strip_prefix(&self.content_dir)
+                .strip_prefix(content_dir)
                 .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
             let dest = safe_path(self.fs.as_ref(), output_base, rel)?;
             if let Some(parent) = dest.parent() {
                 self.fs.create_dir_all(parent)?;
             }
             self.fs.copy_file(&entry, &dest)?;
+        }
+        Ok(())
+    }
+
+    fn copy_dir_all(&self, from: &Path, to: &Path) -> Result<(), RawssgError> {
+        self.fs.create_dir_all(to)?;
+        for entry in self.fs.walk_dir(from)? {
+            let rel = entry
+                .strip_prefix(from)
+                .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
+            let dest = to.join(rel);
+            if self.fs.is_dir(&entry) {
+                self.fs.create_dir_all(&dest)?;
+            } else {
+                if let Some(parent) = dest.parent() {
+                    self.fs.create_dir_all(parent)?;
+                }
+                self.fs.copy_file(&entry, &dest)?;
+            }
         }
         Ok(())
     }
@@ -343,15 +393,26 @@ impl SiteBuilder {
             .ok_or_else(|| RawssgError::Config("template renderer not set".into()))?;
 
         #[cfg(feature = "tera")]
-        let feed_context_builder = self
-            .feed_context_builder
-            .take()
-            .ok_or_else(|| RawssgError::Config("feed context builder not set".into()))?;
+        let feed_context_builder = if self.config.generators.rss.enabled {
+            Some(
+                self.feed_context_builder
+                    .take()
+                    .ok_or_else(|| RawssgError::Config("feed context builder not set".into()))?,
+            )
+        } else {
+            None
+        };
+
         #[cfg(feature = "tera")]
-        let sitemap_context_builder = self
-            .sitemap_context_builder
-            .take()
-            .ok_or_else(|| RawssgError::Config("sitemap context builder not set".into()))?;
+        let sitemap_context_builder = if self.config.generators.sitemap.enabled {
+            Some(
+                self.sitemap_context_builder
+                    .take()
+                    .ok_or_else(|| RawssgError::Config("sitemap context builder not set".into()))?,
+            )
+        } else {
+            None
+        };
 
         if self.content_dir == Path::new("content") {
             self.content_dir = PathBuf::from(&self.config.build.content_dir);

@@ -1,6 +1,7 @@
 #[cfg(feature = "serve")]
 mod server {
     use crate::error::RawssgError;
+    use crate::fs::FileSystem;
     use crate::fs::real::RealFs;
     use crate::util::safe_path;
     use std::path::{Path, PathBuf};
@@ -22,6 +23,9 @@ mod server {
             Some("woff") => "font/woff",
             Some("woff2") => "font/woff2",
             Some("ttf") => "font/ttf",
+            Some("txt") | Some("md") | Some("yaml") | Some("yml") | Some("log") => {
+                "text/plain; charset=utf-8"
+            }
             _ => "application/octet-stream",
         }
     }
@@ -37,22 +41,26 @@ mod server {
         let candidate = Path::new(requested_path);
 
         match safe_path(&RealFs, dist_path, candidate) {
-            Ok(safe_path) => match std::fs::read(&safe_path) {
-                Ok(content) => {
-                    let mime = mime_type(&safe_path);
-                    let header = Header::from_bytes("Content-Type", mime.as_bytes())
-                        .unwrap_or_else(|_| {
-                            Header::from_bytes("Content-Type", b"application/octet-stream").unwrap()
-                        });
-                    let response = Response::from_data(content).with_header(header);
-                    request.respond(response).ok();
+            Ok(safe_path) => {
+                let fs = RealFs;
+                match fs.read_bytes(&safe_path) {
+                    Ok(content) => {
+                        let mime = mime_type(&safe_path);
+                        let header = Header::from_bytes("Content-Type", mime.as_bytes())
+                            .unwrap_or_else(|_| {
+                                Header::from_bytes("Content-Type", b"application/octet-stream")
+                                    .unwrap()
+                            });
+                        let response = Response::from_data(content).with_header(header);
+                        request.respond(response).ok();
+                    }
+                    Err(_) => {
+                        let response = Response::from_string("500 Internal Server Error")
+                            .with_status_code(500);
+                        request.respond(response).ok();
+                    }
                 }
-                Err(_) => {
-                    let response =
-                        Response::from_string("500 Internal Server Error").with_status_code(500);
-                    request.respond(response).ok();
-                }
-            },
+            }
             Err(_) => {
                 let response = Response::from_string("404 Not Found").with_status_code(404);
                 request.respond(response).ok();

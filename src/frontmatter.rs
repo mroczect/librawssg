@@ -19,8 +19,16 @@ pub fn parse_frontmatter_and_render(
     let without_first = trimmed.trim_start_matches("---").trim_start();
     let end = without_first
         .find("\n---")
-        .or_else(|| without_first.find("\r\n---"))
-        .unwrap_or(without_first.len());
+        .or_else(|| without_first.find("\r\n---"));
+    let end = match end {
+        Some(pos) => pos,
+        None => {
+            return Err(RawssgError::Frontmatter {
+                path: path.to_path_buf(),
+                source: "missing closing '---'".into(),
+            });
+        }
+    };
     let yaml_str = &without_first[..end];
     let markdown_str = without_first[end..]
         .trim_start_matches("\n---")
