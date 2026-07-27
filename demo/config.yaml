@@ -17,7 +17,7 @@ site:
 
 build:
   content_dir: "content"
-  output_dir: "../dist"
+  output_dir: "./dist"
   templates_dir: "templates"
   static_dir: "static"
 
@@ -34,10 +34,10 @@ content_types:
 
 generators:
   rss:
-    enabled: true
+    enabled: false
     path: "rss.xml"
     template: "rss.xml"
   sitemap:
-    enabled: true
+    enabled: false
     path: "sitemap.xml"
     template: "sitemap.xml"
