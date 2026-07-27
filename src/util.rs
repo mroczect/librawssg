@@ -27,10 +27,9 @@ pub fn safe_path(
     candidate: &Path,
 ) -> Result<PathBuf, RawssgError> {
     let base_canon = fs.canonicalize(base).map_err(|e| {
-        RawssgError::PathTraversal(format!(
-            "Cannot canonicalize base '{}': {}",
-            base.display(),
-            e
+        RawssgError::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Cannot canonicalize base '{}': {}", base.display(), e),
         ))
     })?;
 
@@ -41,37 +40,48 @@ pub fn safe_path(
     };
     let normalized = normalize_path(&joined);
 
-    let resolved = if fs.exists(&normalized) {
-        fs.canonicalize(&normalized).map_err(|e| {
-            RawssgError::PathTraversal(format!(
-                "Cannot resolve path '{}': {}",
-                normalized.display(),
-                e
+    if fs.exists(&normalized) {
+        let resolved = fs.canonicalize(&normalized).map_err(|e| {
+            RawssgError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Cannot resolve path '{}': {}", normalized.display(), e),
             ))
-        })?
+        })?;
+        if !resolved.starts_with(&base_canon) {
+            return Err(RawssgError::PathTraversal(format!(
+                "Path traversal detected: {}",
+                resolved.display()
+            )));
+        }
+        Ok(resolved)
     } else {
-        if let Some(parent) = normalized.parent()
-            && !parent.starts_with(&base_canon)
-            && parent != base_canon
-        {
+        let parent = normalized.parent().ok_or_else(|| {
+            RawssgError::PathTraversal(format!(
+                "Cannot determine parent of output path: {}",
+                normalized.display()
+            ))
+        })?;
+        let parent_canon = fs.canonicalize(parent).map_err(|e| {
+            RawssgError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Cannot resolve parent '{}': {}", parent.display(), e),
+            ))
+        })?;
+        if !parent_canon.starts_with(&base_canon) {
             return Err(RawssgError::PathTraversal(format!(
                 "Path escapes base: {}",
                 normalized.display()
             )));
         }
-        normalized
-    };
-
-    if !resolved.starts_with(&base_canon) {
-        return Err(RawssgError::PathTraversal(format!(
-            "Path traversal detected: {}",
-            resolved.display()
-        )));
+        let file_name = normalized.file_name().ok_or_else(|| {
+            RawssgError::PathTraversal(format!(
+                "Output path has no file name: {}",
+                normalized.display()
+            ))
+        })?;
+        Ok(parent_canon.join(file_name))
     }
-
-    Ok(resolved)
 }
-
 pub fn slugify(title: &str) -> String {
     title
         .to_lowercase()
