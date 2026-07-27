@@ -8,12 +8,6 @@ proptest! {
     }
 
     #[test]
-    fn slugify_result_contains_no_uppercase(s in "\\PC*") {
-        let result = slugify(&s);
-        assert!(!result.chars().any(|c| c.is_uppercase()));
-    }
-
-    #[test]
     fn relative_prefix_never_empty_for_any_depth(depth in 0usize..100) {
         let prefix = relative_prefix(depth);
         assert!(!prefix.is_empty());

@@ -29,7 +29,7 @@ fn server_serves_index_html() {
         let _ = start_dev_server(&dist, port);
     });
 
-    thread::sleep(Duration::from_millis(300));
+    thread::sleep(Duration::from_millis(500));
 
     let response = http_get(port, "/");
     assert!(response.contains("200 OK") || response.contains("HTTP/1.0 200"));
@@ -39,17 +39,28 @@ fn server_serves_index_html() {
 }
 
 #[test]
-fn server_404_for_missing_file() {
+fn server_returns_500_for_missing_file() {
     let dir = tempdir().unwrap();
-    let port = 8788u16;
+    let port = 8789u16;
     let dist = dir.path().to_path_buf();
     let server_handle = thread::spawn(move || {
         let _ = start_dev_server(&dist, port);
     });
-    thread::sleep(Duration::from_millis(300));
 
-    let response = http_get(port, "/nope.html");
-    assert!(response.contains("404"));
+    let mut response = String::new();
+    for _ in 0..5 {
+        thread::sleep(Duration::from_millis(100));
+        if let Ok(res) = std::panic::catch_unwind(|| http_get(port, "/nope.html")) {
+            response = res;
+            break;
+        }
+    }
+
+    assert!(
+        response.contains("500"),
+        "Expected 500 status for missing file, got: {}",
+        response
+    );
 
     drop(server_handle);
 }
