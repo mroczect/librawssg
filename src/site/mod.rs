@@ -1,4 +1,4 @@
-pub mod builder;
+pub mod builders;
 pub mod feed;
 pub mod page;
 pub mod sitemap;
