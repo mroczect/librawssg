@@ -66,14 +66,8 @@ impl Site {
     fn generate_to(&self, output_base: &Path) -> Result<(), RawssgError> {
         self.fs.create_dir_all(output_base)?;
 
-        let static_dir = self
-            .fs
-            .canonicalize(Path::new(&self.config.build.static_dir))
-            .map_err(|e| RawssgError::SiteGeneration(format!("static dir: {}", e)))?;
-        let content_dir = self
-            .fs
-            .canonicalize(&self.content_dir)
-            .map_err(|e| RawssgError::SiteGeneration(format!("content dir: {}", e)))?;
+        let static_dir = self.try_canonicalize_or_skip(Path::new(&self.config.build.static_dir))?;
+        let content_dir = self.try_canonicalize_or_skip(&self.content_dir)?;
 
         for page in &self.pages {
             if page.is_list {
@@ -114,11 +108,14 @@ impl Site {
             self.fs.write(&out_path, html.as_bytes())?;
         }
 
-        if self.fs.exists(&static_dir) {
-            self.copy_static_assets(&static_dir, output_base)?;
+        if let Some(ref dir) = static_dir
+            && self.fs.exists(dir)
+        {
+            self.copy_static_assets(dir, output_base)?;
         }
-        self.copy_content_assets(&content_dir, output_base)?;
-
+        if let Some(ref dir) = content_dir {
+            self.copy_content_assets(dir, output_base)?;
+        }
         #[cfg(feature = "tera")]
         {
             if self.config.generators.rss.enabled {
@@ -180,6 +177,19 @@ impl Site {
         }
 
         Ok(())
+    }
+
+    fn try_canonicalize_or_skip(&self, path: &Path) -> Result<Option<PathBuf>, RawssgError> {
+        match self.fs.canonicalize(path) {
+            Ok(p) if self.fs.exists(&p) => Ok(Some(p)),
+            Ok(_) => Ok(None),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(RawssgError::SiteGeneration(format!(
+                "Cannot access directory '{}': {}",
+                path.display(),
+                e
+            ))),
+        }
     }
 
     #[cfg(feature = "tera")]

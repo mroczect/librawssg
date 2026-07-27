@@ -27,10 +27,11 @@ pub fn safe_path(
     candidate: &Path,
 ) -> Result<PathBuf, RawssgError> {
     let base_canon = fs.canonicalize(base).map_err(|e| {
-        RawssgError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Cannot canonicalize base '{}': {}", base.display(), e),
-        ))
+        RawssgError::Io(std::io::Error::other(format!(
+            "Cannot canonicalize base '{}': {}",
+            base.display(),
+            e
+        )))
     })?;
 
     let joined = if candidate.is_relative() {
@@ -42,10 +43,11 @@ pub fn safe_path(
 
     if fs.exists(&normalized) {
         let resolved = fs.canonicalize(&normalized).map_err(|e| {
-            RawssgError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Cannot resolve path '{}': {}", normalized.display(), e),
-            ))
+            RawssgError::Io(std::io::Error::other(format!(
+                "Cannot resolve path '{}': {}",
+                normalized.display(),
+                e
+            )))
         })?;
         if !resolved.starts_with(&base_canon) {
             return Err(RawssgError::PathTraversal(format!(
@@ -62,10 +64,11 @@ pub fn safe_path(
             ))
         })?;
         let parent_canon = fs.canonicalize(parent).map_err(|e| {
-            RawssgError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Cannot resolve parent '{}': {}", parent.display(), e),
-            ))
+            RawssgError::Io(std::io::Error::other(format!(
+                "Cannot resolve parent '{}': {}",
+                parent.display(),
+                e
+            )))
         })?;
         if !parent_canon.starts_with(&base_canon) {
             return Err(RawssgError::PathTraversal(format!(

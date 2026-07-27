@@ -36,13 +36,16 @@ fn invalid_yaml_in_frontmatter() {
 }
 
 #[test]
-fn no_closing_dashes_treats_rest_as_yaml() {
+fn missing_closing_dashes_error() {
     let input = "---\ntitle: Test\ndesc: Test desc\n";
     let renderer = MockMarkdownRenderer::identity();
-    let (fm, html) = parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap();
-    assert_eq!(fm.title, "Test");
-    assert_eq!(fm.desc, "Test desc");
-    assert!(html.is_empty());
+    let err = parse_frontmatter_and_render(input, Path::new("f.md"), &renderer).unwrap_err();
+    match err {
+        RawssgError::Frontmatter { source, .. } => {
+            assert!(source.to_string().contains("missing closing '---'"));
+        }
+        _ => panic!("expected Frontmatter error about missing closing dashes"),
+    }
 }
 
 #[test]

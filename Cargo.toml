@@ -38,3 +38,5 @@ serve = ["dep:tiny_http", "dep:notify"]
 pulldown-cmark = "0.13"
 tempfile = "3.27.0"
 tera = "2"
+
+proptest = "1.11.0"
