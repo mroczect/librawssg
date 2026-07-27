@@ -1,7 +1,7 @@
 use librawssg::markdown::PulldownMarkdown;
-use librawssg::site::builder::SiteBuilder;
 use librawssg::site::context::{TeraFeedContextBuilder, TeraSitemapContextBuilder};
 use librawssg::site::TeraRenderer;
+use librawssg::SiteBuilder;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,6 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let md = PulldownMarkdown;
+
     let content_dir = Path::new("content");
     let output_dir = Path::new("dist");
 
