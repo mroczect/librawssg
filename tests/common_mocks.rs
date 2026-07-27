@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[cfg(feature = "tera")]
 pub mod context_mocks {
     use librawssg::error::RawssgError;
