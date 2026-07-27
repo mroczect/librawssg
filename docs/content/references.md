@@ -1,6 +1,6 @@
 ---
 title: API Reference
-desc: Complete reference of all public types, traits, functions, and modules in librawssg
+desc: Complete reference of all public types, traits, functions, and modules in librawssg v0.5.0
 ---
 
 This document lists every public item exported by `librawssg`.  
@@ -18,12 +18,15 @@ Configuration loading traits and implementations.
 pub trait ConfigLoader: Send + Sync {
     fn load(&self) -> Result<RawssgConfig, RawssgError>;
     fn load_or_default(&self) -> RawssgConfig {
-        self.load().unwrap_or_default()
+        self.load().unwrap_or_else(|e| {
+            tracing::error!("Failed to load config, using defaults: {}", e);
+            RawssgConfig::default()
+        })
     }
 }
 ```
 
-Implementors provide a way to produce a `RawssgConfig`. The default method `load_or_default()` returns the loaded config, or the default if loading fails.
+Implementors produce a `RawssgConfig`. `load_or_default()` logs the error and returns the default configuration if loading fails.
 
 ### `YamlConfigLoader<P>`
 
@@ -31,7 +34,7 @@ Implementors provide a way to produce a `RawssgConfig`. The default method `load
 pub struct YamlConfigLoader<P: AsRef<Path> + Send + Sync> { /* path */ }
 ```
 
-`YamlConfigLoader` reads a YAML file and deserialises it into a `RawssgConfig`.  
+Reads a YAML file and deserialises it into a `RawssgConfig`.  
 **Constructor**:
 
 ```rust
@@ -46,7 +49,7 @@ pub fn new(path: P) -> Self;
 pub struct DefaultConfig;
 ```
 
-A `ConfigLoader` that always returns `RawssgConfig::default()`.
+A `ConfigLoader` that always returns `RawssgConfig::default()` (which now includes a default `page` content type).
 
 ---
 
@@ -86,7 +89,8 @@ pub fn parse_frontmatter_and_render(
 ) -> Result<(PageFrontMatter, String), RawssgError>;
 ```
 
-Extracts YAML frontmatter from a string, parses it into `PageFrontMatter`, and renders the remaining Markdown to HTML using the provided renderer. Returns a tuple of the frontmatter and the HTML content.
+Extracts YAML frontmatter from a string. Returns a `Frontmatter` error if the opening or closing `---` is missing, or if the YAML is invalid.  
+Renders the remaining Markdown to HTML using the provided renderer. Returns the frontmatter and the rendered HTML.
 
 ---
 
@@ -108,10 +112,12 @@ pub trait FileSystem: Send + Sync {
     fn copy_file(&self, from: &Path, to: &Path) -> io::Result<u64>;
     fn walk_dir(&self, root: &Path) -> io::Result<Vec<PathBuf>>;
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf>;
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()>;   // new in v0.5.0
 }
 ```
 
-Abstraction over all filesystem operations. Implement this trait to support in‑memory files, network storage, or any custom backend.
+Abstraction over all filesystem operations. Implement this trait to support in‑memory files, network storage, or any custom backend.  
+The `rename` method is used by `Site::generate` for atomic output; a cross‑device fallback is triggered if `rename` returns `CrossesDevices`.
 
 ### `RealFs`
 
@@ -155,7 +161,7 @@ pub fn start_dev_server(output_dir: &Path, port: u16) -> Result<(), RawssgError>
 ```
 
 Starts a simple HTTP server that serves static files from `output_dir`.  
-Requests are handled in separate threads. MIME types are detected from file extensions. Uses `safe_path` to prevent directory traversal.
+Requests are handled in separate threads. MIME types are detected from file extensions (including `text/plain` for `.txt`, `.md`, `.yaml`, `.yml`, `.log`). Uses `safe_path` to prevent directory traversal.
 
 ### `watch_dirs`
 
@@ -211,8 +217,7 @@ pub fn new() -> Self;
 pub fn add_raw_template(&mut self, name: &str, content: &str) -> Result<(), RawssgError>;
 ```
 
-Adds a template to the engine. Call this before passing the renderer to `SiteBuilder`.
-
+Adds a template to the engine. Call this before passing the renderer to `SiteBuilder`.  
 `TeraRenderer` implements `TemplateRenderer` and `Default`.
 
 ### `ContentHandler` trait
@@ -259,7 +264,8 @@ pub fn build_page_context(
 ) -> Result<Option<PageContext>, RawssgError>;
 ```
 
-Validates the path, reads the file, extracts frontmatter, renders Markdown, and returns a `PageContext`. Drafts are skipped automatically.
+Validates the path, reads the file, extracts frontmatter, renders Markdown, and returns a `PageContext`. Drafts are skipped automatically.  
+This function is used internally but is public for custom handler implementations.
 
 ---
 
@@ -271,20 +277,24 @@ pub struct SiteBuilder { /* private fields */ }
 
 The entry point for constructing a site.
 
+**Location**: `librawssg::site::builders::site_builder` (re‑exported as `librawssg::SiteBuilder`).
+
 **Methods**:
 
-| Method                                                                                         | Description                                                                      |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `pub fn new() -> Self`                                                                         | Creates a new builder with default values and `RealFs`.                          |
-| `pub fn config(self, config: RawssgConfig) -> Self`                                            | Sets the entire configuration.                                                   |
-| `pub fn load_config<P: AsRef<Path> + Send + Sync>(self, path: P) -> Result<Self, RawssgError>` | Loads configuration from a YAML file.                                            |
-| `pub fn content_dir(self, dir: impl Into<PathBuf>) -> Self`                                    | Sets the content directory.                                                      |
-| `pub fn output_dir(self, dir: impl Into<PathBuf>) -> Self`                                     | Sets the output directory.                                                       |
-| `pub fn with_fs(self, fs: Box<dyn FileSystem>) -> Self`                                        | Sets the filesystem backend.                                                     |
-| `pub fn with_markdown_renderer(self, md: Box<dyn MarkdownRenderer>) -> Self`                   | Sets the Markdown renderer (**required**).                                       |
-| `pub fn with_template_renderer(self, tr: Box<dyn TemplateRenderer>) -> Self`                   | Sets the template renderer (**required**).                                       |
-| `pub fn add_handler(self, handler: Box<dyn ContentHandler>) -> Self`                           | Adds a content handler (defaults: `MarkdownPageHandler`, `StaticFileHandler`).   |
-| `pub fn build(self) -> Result<Site, RawssgError>`                                              | Validates config, processes all content, and returns a ready‑to‑generate `Site`. |
+| Method                                                                                         | Description                                                                                                         |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `pub fn new() -> Self`                                                                         | Creates a new builder with default values and `RealFs`.                                                             |
+| `pub fn config(self, config: RawssgConfig) -> Self`                                            | Sets the entire configuration.                                                                                      |
+| `pub fn load_config<P: AsRef<Path> + Send + Sync>(self, path: P) -> Result<Self, RawssgError>` | Loads configuration from a YAML file.                                                                               |
+| `pub fn content_dir(self, dir: impl Into<PathBuf>) -> Self`                                    | Sets the content directory (default `"content"`).                                                                   |
+| `pub fn output_dir(self, dir: impl Into<PathBuf>) -> Self`                                     | Sets the output directory (default `"dist"`).                                                                       |
+| `pub fn with_fs(self, fs: Box<dyn FileSystem>) -> Self`                                        | Sets the filesystem backend.                                                                                        |
+| `pub fn with_markdown_renderer(self, md: Box<dyn MarkdownRenderer>) -> Self`                   | Sets the Markdown renderer (**required**).                                                                          |
+| `pub fn with_template_renderer(self, tr: Box<dyn TemplateRenderer>) -> Self`                   | Sets the template renderer (**required**).                                                                          |
+| `pub fn add_handler(self, handler: Box<dyn ContentHandler>) -> Self`                           | Adds a content handler (defaults: `MarkdownPageHandler`, `StaticFileHandler`).                                      |
+| `pub fn with_feed_context_builder(self, b: Box<dyn FeedContextBuilder>) -> Self`               | Sets the feed context builder. **Only required if `generators.rss.enabled` is `true`.** [![feature: tera](https://img.shields.io/badge/feature-tera-blue)] |
+| `pub fn with_sitemap_context_builder(self, b: Box<dyn SitemapContextBuilder>) -> Self`         | Sets the sitemap context builder. **Only required if `generators.sitemap.enabled` is `true`.** [![feature: tera](https://img.shields.io/badge/feature-tera-blue)] |
+| `pub fn build(self) -> Result<Site, RawssgError>`                                              | Validates config, canonicalizes directories, processes all content, and returns a ready‑to‑generate `Site`.          |
 
 ### `Site`
 
@@ -292,14 +302,15 @@ The entry point for constructing a site.
 pub struct Site { /* private fields */ }
 ```
 
-A fully processed site ready for output generation.
+A fully processed site ready for output generation.  
+**Location**: `librawssg::site::builders::site` (re‑exported as `librawssg::Site`).
 
 **Methods**:
 
-| Method                                             | Description                                                                                                                                   |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pub fn pages(&self) -> &[PageContext]`            | Returns all pages (including list pages).                                                                                                     |
-| `pub fn generate(self) -> Result<(), RawssgError>` | Writes HTML files, copies static assets and non‑Markdown files, optionally generates RSS and sitemap. Uses atomic output (temp dir + rename). |
+| Method                                             | Description                                                                                                                                                                                                                   |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pub fn pages(&self) -> &[PageContext]`            | Returns all pages (including list pages).                                                                                                                                                                                     |
+| `pub fn generate(self) -> Result<(), RawssgError>` | Writes HTML files, copies static assets and non‑Markdown files, optionally generates RSS and sitemap. Uses atomic output via `FileSystem::rename` with a recursive copy fallback if the rename fails due to `CrossesDevices`. |
 
 ---
 
@@ -311,22 +322,41 @@ pub fn generate_feed(
     config: &RawssgConfig,
     posts: &[&PageContext],
     base_url: &str,
+    context_builder: &dyn FeedContextBuilder,
 ) -> Result<String, RawssgError>;
 ```
 
-Renders an RSS feed from a list of blog posts using the configured RSS template.
+Renders an RSS feed from a list of blog posts using the configured RSS template and the provided context builder.
 
 ### `generate_sitemap` [![feature: tera](https://img.shields.io/badge/feature-tera-blue)]
 
 ```rust
 pub fn generate_sitemap(
     renderer: &dyn TemplateRenderer,
+    config: &RawssgConfig,
     pages: &[PageContext],
     base_url: &str,
+    context_builder: &dyn SitemapContextBuilder,
 ) -> Result<String, RawssgError>;
 ```
 
-Renders a sitemap XML from all pages using the configured sitemap template.
+Renders a sitemap XML from all pages using the configured sitemap template and the provided context builder.
+
+### Context builders (in `site::context`) [![feature: tera](https://img.shields.io/badge/feature-tera-blue)]
+
+```rust
+pub trait FeedContextBuilder: Send + Sync {
+    fn build_feed_context(&self, config: &RawssgConfig, posts: &[&PageContext], base_url: &str)
+        -> Result<Box<dyn Context>, RawssgError>;
+}
+
+pub trait SitemapContextBuilder: Send + Sync {
+    fn build_sitemap_context(&self, config: &RawssgConfig, pages: &[PageContext], base_url: &str)
+        -> Result<Box<dyn Context>, RawssgError>;
+}
+```
+
+Default Tera implementations (`TeraFeedContextBuilder`, `TeraSitemapContextBuilder`) insert `site`, `posts`/`pages`, and `base_url`. Custom builders can inject additional variables.
 
 ---
 
@@ -343,14 +373,15 @@ pub struct RawssgConfig {
 }
 ```
 
-Top‑level configuration. Derives `Default`.  
+Top‑level configuration.  
+**Default**: includes a `page` content type (`**/*.md` → `base.html`).  
 **Method**:
 
 ```rust
 pub fn validate(&self) -> Result<(), RawssgError>;
 ```
 
-Validates the configuration according to the rules documented in [Configuration](configuration.html).
+Validates that `site_name` is non‑empty, `content_types` is non‑empty, each content type has a valid glob pattern and template, and required generator fields are present when enabled.
 
 ### `GlobalConfig`
 
@@ -358,9 +389,9 @@ Validates the configuration according to the rules documented in [Configuration]
 pub struct GlobalConfig {
     pub navbar: Vec<NavItem>,
     pub sidebar: Vec<NavItem>,
-    pub site_name: String,
+    pub site_name: String,            // default "rawssg"
     pub description: Option<String>,
-    pub language: Option<String>,
+    pub language: Option<String>,     // default Some("en")
     pub base_url: Option<String>,
     pub author: Option<String>,
     pub repo_url: Option<String>,
@@ -368,7 +399,7 @@ pub struct GlobalConfig {
 }
 ```
 
-Site‑wide metadata. `site_name` defaults to `"rawssg"`. All fields are available in templates as `site.<field>`.
+Site‑wide metadata available in templates as `site.<field>`.
 
 ### `BuildConfig`
 
@@ -380,8 +411,6 @@ pub struct BuildConfig {
     pub static_dir: String,     // default "static"
 }
 ```
-
-Directory layout configuration. All paths are relative to the working directory.
 
 ### `ContentTypeDef`
 
@@ -410,13 +439,13 @@ pub struct GeneratorsConfig {
 
 ```rust
 pub struct GeneratorDef {
-    pub enabled: bool,      // default true
+    pub enabled: bool,      // default false (changed in v0.5.0)
     pub path: String,
     pub template: String,
 }
 ```
 
-Configuration for RSS and sitemap generators. Both default to enabled, but `path` and `template` must be provided if enabled.
+Configuration for RSS and sitemap generators. Both default to **disabled**. When enabled, `path` and `template` must be provided.
 
 ### `NavItem`
 
@@ -478,7 +507,10 @@ pub fn safe_path(
 ) -> Result<PathBuf, RawssgError>;
 ```
 
-Validates that `candidate` is inside `base`. Normalises `..` and `.`, resolves symlinks if the path exists, and prevents directory traversal. Returns the safe canonical path.
+Validates that `candidate` is inside `base`.  
+- If the candidate exists, it canonicalises the path and checks the prefix.  
+- If the candidate does not exist (used for output files), it canonicalises the parent directory and verifies it is still within `base`.  
+Prevents directory traversal and symlink escapes. Returns the safe canonical path.
 
 ### `slugify`
 
@@ -502,4 +534,5 @@ Returns a relative path prefix based on directory depth: `"./"` for depth 0, `".
 pub fn match_pattern(pattern: &str, path: &Path) -> bool;
 ```
 
-Matches a path against a glob pattern with `*` (single segment) and `**` (any number of segments). Used internally for content type matching.
+Matches a path against a glob pattern with `*` (single segment) and `**` (any number of segments).  
+The algorithm correctly handles patterns like `blog/**/*.html` (will not match `.md`). Used internally for content type matching.
