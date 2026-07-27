@@ -116,23 +116,36 @@ pub fn match_pattern(pattern: &str, path: &Path) -> bool {
     let segments: Vec<&str> = path_str.split('/').collect();
     let pattern_segments: Vec<&str> = pattern.split('/').collect();
 
-    if pattern_segments.len() > segments.len() {
-        return false;
+    match_pattern_slice(&pattern_segments, &segments)
+}
+
+fn match_pattern_slice(pattern: &[&str], segments: &[&str]) -> bool {
+    if pattern.is_empty() {
+        return segments.is_empty();
+    }
+    if segments.is_empty() {
+        return pattern.iter().all(|&p| p == "**");
     }
 
-    for (i, pat) in pattern_segments.iter().enumerate() {
-        if i >= segments.len() {
-            return false;
+    match pattern[0] {
+        "**" => {
+            if pattern.len() == 1 {
+                return true;
+            }
+            for i in 0..segments.len() {
+                if match_pattern_slice(&pattern[1..], &segments[i..]) {
+                    return true;
+                }
+            }
+            false
         }
-        if *pat == "**" {
-            return true;
-        }
-        if !segment_matches(pat, segments[i]) {
-            return false;
+        pat => {
+            if !segment_matches(pat, segments[0]) {
+                return false;
+            }
+            match_pattern_slice(&pattern[1..], &segments[1..])
         }
     }
-
-    pattern_segments.len() == segments.len()
 }
 
 fn segment_matches(pattern: &str, segment: &str) -> bool {
