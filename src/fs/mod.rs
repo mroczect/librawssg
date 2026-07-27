@@ -14,6 +14,7 @@ pub trait FileSystem: Send + Sync {
     fn copy_file(&self, from: &Path, to: &Path) -> io::Result<u64>;
     fn walk_dir(&self, root: &Path) -> io::Result<Vec<PathBuf>>;
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf>;
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()>;
 }
 
 pub mod real;
