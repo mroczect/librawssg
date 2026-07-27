@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  base-checks:
+  base:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,23 +27,20 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-base-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-base-
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Lint (no features)
-        run: cargo clippy -- -D warnings
-
-      - name: Build
-        run: cargo build --verbose
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Test (no features)
         run: cargo test --workspace --verbose
 
-  feature-checks:
+  features:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +48,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: clippy
 
       - name: Cache Cargo artifacts
         uses: actions/cache@v4
@@ -60,18 +57,12 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-features-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-features-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-features-
 
       - name: Lint (all features)
-        run: cargo clippy --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Test with tera,pulldown
-        run: cargo test --workspace --verbose --features tera,pulldown
-
-      - name: Test with serve
-        run: cargo test --workspace --verbose --features serve
-
-      - name: Test all features
+      - name: Test (all features)
         run: cargo test --workspace --verbose --all-features

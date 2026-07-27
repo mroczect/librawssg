@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RawssgConfig {
     #[serde(default)]
     pub site: GlobalConfig,
@@ -152,6 +152,23 @@ impl Default for BuildConfig {
             output_dir: default_output_dir(),
             templates_dir: default_templates_dir(),
             static_dir: default_static_dir(),
+        }
+    }
+}
+
+impl Default for RawssgConfig {
+    fn default() -> Self {
+        Self {
+            site: GlobalConfig::default(),
+            build: BuildConfig::default(),
+            content_types: vec![ContentTypeDef {
+                name: "page".into(),
+                pattern: "**/*.md".into(),
+                template: "base.html".into(),
+                list_template: None,
+                list_enabled: false,
+            }],
+            generators: GeneratorsConfig::default(),
         }
     }
 }

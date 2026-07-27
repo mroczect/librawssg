@@ -141,6 +141,10 @@ impl FileSystem for MockFs {
             ))
         }
     }
+
+    fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 pub struct MockMarkdownRenderer {

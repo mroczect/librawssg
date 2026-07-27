@@ -10,7 +10,14 @@ fn default_config_returns_valid_default() {
     let config = loader.load().expect("default config should load");
     assert_eq!(config.site.site_name, "rawssg");
     assert_eq!(config.build.content_dir, "content");
-    assert!(config.content_types.is_empty());
+    assert!(
+        !config.content_types.is_empty(),
+        "default config must have at least one content type"
+    );
+    assert_eq!(config.content_types.len(), 1);
+    assert_eq!(config.content_types[0].name, "page");
+    assert_eq!(config.content_types[0].pattern, "**/*.md");
+    assert_eq!(config.content_types[0].template, "base.html");
 }
 
 #[test]

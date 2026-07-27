@@ -12,6 +12,7 @@ mod tera_tests {
 
     fn make_config() -> RawssgConfig {
         let mut cfg = RawssgConfig::default();
+        cfg.content_types.clear();
         cfg.build.content_dir = "content".into();
         cfg.build.output_dir = "dist".into();
         cfg.build.templates_dir = "templates".into();
