@@ -92,3 +92,7 @@ mod server {
 
 #[cfg(feature = "serve")]
 pub use server::start_dev_server;
+#[cfg(feature = "serve")]
+pub mod watcher;
+#[cfg(feature = "serve")]
+pub use watcher::watch_dirs;
