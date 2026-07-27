@@ -1,50 +1,54 @@
-# librawssg · [![GitHub tag](https://img.shields.io/github/v/tag/mroczect/librawssg?label=version)](https://github.com/mroczect/librawssg/tags) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# librawssg · [![GitHub tag](https://img.shields.io/github/v/tag/mroczect/librawssg?label=version)](https://github.com/mroczect/librawssg/tags) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![CI](https://github.com/mroczect/librawssg/actions/workflows/ci.yml/badge.svg)](https://github.com/mroczect/librawssg/actions/workflows/ci.yml)
 
 **librawssg** is the engine‑agnostic, safety‑first kernel for building static site generators in Rust.  
-It gives you all the primitives you need: filesystem abstraction, frontmatter parsing, Markdown rendering,
-template rendering, content processing pipelines, feed & sitemap generation, and a secure development server.
+It gives you all the primitives you need: filesystem abstraction, frontmatter parsing, Markdown rendering, template rendering, content processing pipelines, feed & sitemap generation, and a secure development server.
 
-The library does **not** include a CLI – you write your own `main.rs` and compose the parts you need.
+The library does **not** include a CLI – you write your own `main.rs` and compose the parts you need.  
 Optional built‑in implementations for **Tera** and **pulldown‑cmark** are available behind feature flags.
 
 ---
 
 ## Table of Contents
 
+- [What's New in v0.5.0](#whats-new-in-v050)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [API Reference](#api-reference)
   - [Configuration](#configuration)
-    - [YamlConfigLoader](#yamlconfigloader)
+    - [YAML Configuration File](#yaml-configuration-file)
     - [ConfigLoader trait](#configloader-trait)
+    - [RawssgConfig::validate](#rawssgconfigvalidate)
+    - [RawssgConfig default](#rawssgconfig-default)
   - [Error Handling](#error-handling)
-    - [RawssgError](#rawssgerror)
   - [Filesystem Abstraction](#filesystem-abstraction)
     - [FileSystem trait](#filesystem-trait)
     - [RealFs](#realfs)
+    - [Implementing a Custom FileSystem](#implementing-a-custom-filesystem)
   - [Markdown Rendering](#markdown-rendering)
     - [MarkdownRenderer trait](#markdownrenderer-trait)
     - [PulldownMarkdown](#pulldownmarkdown)
+    - [Implementing a Custom Markdown Renderer](#implementing-a-custom-markdown-renderer)
   - [Template Rendering](#template-rendering)
     - [TemplateRenderer trait](#templaterenderer-trait)
     - [Context trait](#context-trait)
     - [TeraRenderer](#terarenderer)
+    - [Implementing a Custom Template Engine](#implementing-a-custom-template-engine)
   - [Content Pipeline](#content-pipeline)
     - [ContentHandler trait](#contenthandler-trait)
     - [MarkdownPageHandler](#markdownpagehandler)
     - [StaticFileHandler](#staticfilehandler)
     - [build_page_context](#build_page_context)
+    - [Adding Custom Handlers](#adding-custom-handlers)
   - [Site Builder](#site-builder)
     - [SiteBuilder](#sitebuilder)
     - [Site](#site)
+    - [Atomic Generation & Cross-Device Fallback](#atomic-generation--cross-device-fallback)
   - [Feed & Sitemap](#feed--sitemap)
-    - [generate_feed](#generate_feed)
-    - [generate_sitemap](#generate_sitemap)
-    - [Context builders](#context-builders)
+    - [generate_feed and generate_sitemap](#generate_feed-and-generate_sitemap)
+    - [Context Builders](#context-builders)
   - [Utility Functions](#utility-functions)
     - [safe_path](#safe_path)
-    - [normalize_path](#normalize_path)
     - [slugify](#slugify)
     - [relative_prefix](#relative_prefix)
     - [match_pattern](#match_pattern)
@@ -53,17 +57,30 @@ Optional built‑in implementations for **Tera** and **pulldown‑cmark** are av
     - [GlobalConfig](#globalconfig)
     - [BuildConfig](#buildconfig)
     - [ContentTypeDef](#contenttypedef)
-    - [GeneratorsConfig](#generatorsconfig)
-    - [GeneratorDef](#generatordef)
+    - [GeneratorsConfig & GeneratorDef](#generatorsconfig--generatordef)
     - [NavItem](#navitem)
     - [PageFrontMatter](#pagefrontmatter)
     - [PageContext](#pagecontext)
   - [Dev Server & Watcher (serve feature)](#dev-server--watcher-serve-feature)
 - [Feature Flags](#feature-flags)
 - [Security](#security)
+- [Full Customisation](#full-customisation)
+  - [Step‑by‑Step: Building a Fully Custom SSG](#stepbystep-building-a-fully-custom-ssg)
 - [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
+
+---
+
+## What's New in v0.5.0
+
+- **Robust path security** – Symlink‑safe output writing via canonicalised parent directories.
+- **Correct glob matching** – `**` patterns now match exactly as expected (e.g., `blog/**/*.html` no longer matches `.md`).
+- **Completely trait‑based** – Added `rename` to `FileSystem`; all I/O goes through the trait for full mockability.
+- **Better defaults** – A default `page` content type (`**/*.md` → `base.html`) is included out‑of‑the‑box.
+- **Optional context builders** – Feed and sitemap context builders are now only required when the respective generator is enabled.
+- **Clearer error messages** – Missing closing `---` in frontmatter is reported explicitly; config loading failures are logged.
+- **Improved testing** – Property‑based tests, dynamic server ports, and a complete mock filesystem.
 
 ---
 
@@ -71,115 +88,56 @@ Optional built‑in implementations for **Tera** and **pulldown‑cmark** are av
 
 ### Method 1: `cargo add` (Git dependency – recommended)
 
-If you have `cargo-edit` installed (`cargo install cargo-edit`), the fastest way is:
-
 ```bash
-cargo add --git https://github.com/mroczect/librawssg.git --tag v0.4.0 librawssg
+cargo add --git https://github.com/mroczect/librawssg.git --tag v0.5.0 librawssg
+cargo add --git https://github.com/mroczect/librawssg.git --tag v0.5.0 librawssg --features tera,pulldown
 ```
-
-To also enable the built‑in Tera and pulldown‑cmark implementations (most common):
-
-```bash
-cargo add --git https://github.com/mroczect/librawssg.git --tag v0.4.0 librawssg --features tera,pulldown
-```
-
-This will add the dependency to your `Cargo.toml` automatically.
-
----
 
 ### Method 2: Manual `Cargo.toml` entry
 
-Add this to your `Cargo.toml`:
-
 ```toml
 [dependencies]
-librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.4.0" }
+librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.5.0" }
+librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.5.0", features = ["tera", "pulldown"] }
 ```
 
-**Always pin a specific tag** to avoid breaking changes. To enable Tera and pulldown-cmark:
-
-```toml
-librawssg = { git = "https://github.com/mroczect/librawssg.git", tag = "v0.4.0", features = ["tera", "pulldown"] }
-```
-
----
-
-## Method 3: Path dependency (local development)
-
-If you cloned the repository and want to hack on the library:
+### Method 3: Path dependency (local development)
 
 ```bash
 git clone https://github.com/mroczect/librawssg.git
 cd librawssg
-```
-
-Then in your project’s `Cargo.toml`:
-
-```toml
-[dependencies]
+# in your project's Cargo.toml:
 librawssg = { path = "../librawssg", features = ["tera", "pulldown"] }
 ```
 
 ---
 
-### Method 4: Full clone and build
-
-```bash
-git clone https://github.com/mroczect/librawssg.git
-cd librawssg
-cargo build --release
-```
-
-Then reference it as a path dependency (see Method 3).
-
----
-
 ## Quick Start
 
-Create a new binary crate and add `librawssg` with the `tera` and `pulldown` features.
-
 ```rust
-use librawssg::site::builder::SiteBuilder;
+use librawssg::SiteBuilder;
 use librawssg::site::TeraRenderer;
 use librawssg::markdown::PulldownMarkdown;
-use librawssg::types::{RawssgConfig, ContentTypeDef};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Prepare the template engine
     let mut tera = TeraRenderer::new();
     tera.add_raw_template("base.html", "<html><body>{{ page_content }}</body></html>")?;
-
-    // 2. Choose a Markdown renderer
     let md = PulldownMarkdown;
 
-    // 3. Build configuration (at least one content_type is required)
-    let mut config = RawssgConfig::default();
+    let mut config = librawssg::RawssgConfig::default();
     config.build.content_dir = "content".into();
     config.build.output_dir = "dist".into();
-    config.content_types.push(ContentTypeDef {
-        name: "page".into(),
-        pattern: "**/*.md".into(),
-        template: "base.html".into(),
-        list_template: None,
-        list_enabled: false,
-    });
 
-    // 4. Build the site
     let site = SiteBuilder::new()
         .config(config)
-        .content_dir("content")
-        .output_dir("dist")
         .with_template_renderer(Box::new(tera))
         .with_markdown_renderer(Box::new(md))
         .build()?;
 
-    // 5. Generate static files
     site.generate()?;
     Ok(())
 }
 ```
-
-Place your Markdown files in `content/`, run the project, and the generated HTML will appear in `dist/`.
 
 ---
 
@@ -187,18 +145,22 @@ Place your Markdown files in `content/`, run the project, and the generated HTML
 
 ```
 src/
-  config/         Configuration loading (YAML, defaults)
-  error.rs        Typed error enum (miette + thiserror)
-  frontmatter.rs  YAML frontmatter extraction and Markdown rendering
-  fs/             FileSystem trait and real filesystem implementation
-  markdown.rs     MarkdownRenderer trait (+ optional pulldown-cmark)
-  serve/          Dev server and file watcher (behind "serve" feature)
-  site/           Site builder, content handlers, feed & sitemap generators
-  types.rs        All configuration and page context types
-  util.rs         Path safety, slugify, glob matching
+  config/           ConfigLoader trait, YamlConfigLoader, DefaultConfig
+  error.rs          RawssgError (miette + thiserror)
+  frontmatter.rs    YAML frontmatter extraction and Markdown rendering
+  fs/               FileSystem trait, RealFs
+  markdown.rs       MarkdownRenderer trait, optional PulldownMarkdown
+  serve/            Dev server and file watcher (feature "serve")
+  site/
+    builders/       Site and SiteBuilder structs
+    context.rs      FeedContextBuilder, SitemapContextBuilder traits
+    feed.rs         generate_feed
+    mod.rs          Core traits: TemplateRenderer, Context, ContentHandler
+    page.rs         build_page_context
+    sitemap.rs      generate_sitemap
+  types.rs          All configuration and page context types
+  util.rs           safe_path, slugify, relative_prefix, match_pattern
 ```
-
-All public types and traits are re‑exported from the crate root.
 
 ---
 
@@ -206,64 +168,90 @@ All public types and traits are re‑exported from the crate root.
 
 ### Configuration
 
-#### `YamlConfigLoader`
+#### YAML Configuration File
 
-```rust
-pub struct YamlConfigLoader<P: AsRef<Path> + Send + Sync> { ... }
-
-impl<P: AsRef<Path> + Send + Sync> YamlConfigLoader<P> {
-    pub fn new(path: P) -> Self;
-}
-
-impl<P: AsRef<Path> + Send + Sync> ConfigLoader for YamlConfigLoader<P> {
-    fn load(&self) -> Result<RawssgConfig, RawssgError>;
-}
+```yaml
+site:
+  site_name: "My Site"
+  description: "A blog about Rust"
+  base_url: "https://example.com"
+  language: "en"
+  author: "Alice"
+build:
+  content_dir: content
+  output_dir: dist
+  templates_dir: templates
+  static_dir: static
+content_types:
+  - name: blog
+    pattern: blog/**/*.md
+    template: post.html
+    list_template: blog_list.html
+    list_enabled: true
+  - name: page
+    pattern: **/*.md
+    template: page.html
+generators:
+  rss:
+    enabled: true
+    path: feed.xml
+    template: rss.xml
+  sitemap:
+    enabled: true
+    path: sitemap.xml
+    template: sitemap.xml
 ```
 
-Loads configuration from a YAML file. Returns a `Config` error on I/O failure or invalid YAML.
-
-#### `ConfigLoader` trait
+#### ConfigLoader trait
 
 ```rust
 pub trait ConfigLoader: Send + Sync {
     fn load(&self) -> Result<RawssgConfig, RawssgError>;
-    fn load_or_default(&self) -> RawssgConfig { ... }
+    fn load_or_default(&self) -> RawssgConfig;
 }
 ```
 
-Trait for loading configuration. Two implementations are provided:
-- `YamlConfigLoader` – reads a YAML file.
-- `DefaultConfig` – always returns `RawssgConfig::default()`.
+- `YamlConfigLoader<P: AsRef<Path>>` – reads a YAML file.
+- `DefaultConfig` – returns `RawssgConfig::default()`.
 
----
+#### RawssgConfig::validate
+
+- Checks that `site_name` is non‑empty.
+- At least one `content_types` entry must exist.
+- Each content type must have a valid glob pattern and a template name.
+- If RSS or sitemap is enabled, their `path` and `template` must be set.
+
+#### RawssgConfig default
+
+Since v0.5.0, the default configuration includes a single content type:
+
+```rust
+ContentTypeDef {
+    name: "page".into(),
+    pattern: "**/*.md".into(),
+    template: "base.html".into(),
+    list_template: None,
+    list_enabled: false,
+}
+```
+
+You can remove it with `config.content_types.clear()` and define your own.
 
 ### Error Handling
 
-#### `RawssgError`
+`RawssgError` implements `std::error::Error`, `Display`, and `miette::Diagnostic`.
 
 ```rust
-pub enum RawssgError {
-    Io(std::io::Error),
-    Config(String),
-    Frontmatter { path: PathBuf, source: Box<dyn Error + Send + Sync> },
-    Template(String),
-    PathTraversal(String),
-    MissingConfig(String),
-    Markdown(String),
-    SiteGeneration(String),
-    NotFound(String),
-    Internal(String),
+match err {
+    RawssgError::Frontmatter { path, source } => { /* ... */ }
+    RawssgError::PathTraversal(msg) => { /* ... */ }
+    // ...
 }
 ```
 
-All variants implement `std::error::Error`, `Display`, and `miette::Diagnostic`. Rich diagnostic messages
-are provided for common failures (e.g., malformed frontmatter).
-
----
-
 ### Filesystem Abstraction
 
-#### `FileSystem` trait
+#### FileSystem trait
 
 ```rust
 pub trait FileSystem: Send + Sync {
@@ -279,26 +267,29 @@ pub trait FileSystem: Send + Sync {
     fn copy_file(&self, from: &Path, to: &Path) -> io::Result<u64>;
     fn walk_dir(&self, root: &Path) -> io::Result<Vec<PathBuf>>;
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf>;
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()>; // new in v0.5.0
 }
 ```
 
-Abstracts all file I/O. Implement this to support in‑memory filesystems, remote storage, etc.
+#### RealFs
 
-#### `RealFs`
+Default implementation delegating to `std::fs` and `walkdir`.
+
+#### Implementing a Custom FileSystem
 
 ```rust
-pub struct RealFs;
-
-impl FileSystem for RealFs { ... }
+struct MyFs;
+impl FileSystem for MyFs {
+    // implement all methods; e.g., read from database or network
+    fn read_to_string(&self, path: &Path) -> io::Result<String> { /* ... */ }
+    // ... etc.
+}
+let site = SiteBuilder::new().with_fs(Box::new(MyFs)).build()?;
 ```
-
-Default implementation that delegates to `std::fs` and `walkdir`. All methods are instrumented with `tracing`.
-
----
 
 ### Markdown Rendering
 
-#### `MarkdownRenderer` trait
+#### MarkdownRenderer trait
 
 ```rust
 pub trait MarkdownRenderer: Send + Sync {
@@ -306,29 +297,22 @@ pub trait MarkdownRenderer: Send + Sync {
 }
 ```
 
-Convert Markdown to HTML. Implement this for any parser.
+#### PulldownMarkdown
 
-#### `PulldownMarkdown`
+Available with `pulldown` feature. Enables tables, strikethrough, task lists.
 
-Available behind the **`pulldown`** feature flag.
+#### Implementing a Custom Markdown Renderer
 
 ```rust
-#[cfg(feature = "pulldown")]
-pub struct PulldownMarkdown;
-
-#[cfg(feature = "pulldown")]
-impl MarkdownRenderer for PulldownMarkdown {
-    fn render(&self, md: &str) -> String;
+struct MyMd;
+impl MarkdownRenderer for MyMd {
+    fn render(&self, md: &str) -> String { my_parser(md) }
 }
 ```
 
-Uses `pulldown-cmark` with tables, strikethrough, and task lists enabled.
-
----
-
 ### Template Rendering
 
-#### `TemplateRenderer` trait
+#### TemplateRenderer trait
 
 ```rust
 pub trait TemplateRenderer: Send + Sync {
@@ -336,9 +320,7 @@ pub trait TemplateRenderer: Send + Sync {
 }
 ```
 
-Renders a named template with a given context. The context is engine‑specific.
-
-#### `Context` trait
+#### Context trait
 
 ```rust
 pub trait Context: Send + Sync {
@@ -347,243 +329,169 @@ pub trait Context: Send + Sync {
 }
 ```
 
-Type‑erased access to the underlying context object. Engine implementations must implement this trait for their context type.
+#### TeraRenderer
 
-#### `TeraRenderer`
+- `new()` – creates an empty Tera instance.
+- `add_raw_template(name, content)` – registers an inline template.
 
-Available behind the **`tera`** feature flag.
+#### Implementing a Custom Template Engine
+
+Implement `TemplateRenderer` and a `Context` wrapper.  
+Example: MiniJinja.
 
 ```rust
-#[cfg(feature = "tera")]
-pub struct TeraRenderer { ... }
-
-#[cfg(feature = "tera")]
-impl TeraRenderer {
-    pub fn new() -> Self;
-    pub fn add_raw_template(&mut self, name: &str, content: &str) -> Result<(), RawssgError>;
+struct MiniJinjaRenderer { env: mini_jinja::Environment<'static> }
+impl TemplateRenderer for MiniJinjaRenderer {
+    fn render(&self, name: &str, ctx: &dyn Context) -> Result<String, RawssgError> {
+        let tmpl = self.env.get_template(name).map_err(|e| RawssgError::Template(e.to_string()))?;
+        let data = ctx.as_any().downcast_ref::<serde_json::Value>().unwrap();
+        tmpl.render(data).map_err(|e| RawssgError::Template(e.to_string()))
+    }
 }
-
-#[cfg(feature = "tera")]
-impl TemplateRenderer for TeraRenderer { ... }
+impl Context for serde_json::Value { /* as_any downcast */ }
 ```
-
-A built‑in Tera engine. Call `add_raw_template` to register templates before passing the renderer to `SiteBuilder`.
-
----
 
 ### Content Pipeline
 
-#### `ContentHandler` trait
+#### ContentHandler trait
 
 ```rust
 pub trait ContentHandler: Send + Sync {
     fn can_handle(&self, relative_path: &Path, original_path: &Path) -> bool;
-    fn process(
-        &self,
-        fs: &dyn FileSystem,
-        md_renderer: &dyn MarkdownRenderer,
-        file_path: &Path,
-        content_dir: &Path,
-    ) -> Result<Option<PageContext>, RawssgError>;
+    fn process(&self, fs: &dyn FileSystem, md_renderer: &dyn MarkdownRenderer,
+               file_path: &Path, content_dir: &Path) -> Result<Option<PageContext>, RawssgError>;
 }
 ```
 
-Process a file into a `PageContext`. Return `None` to skip the file (e.g., drafts).  
-Two built‑in handlers are provided.
+Return `None` to skip a file.
 
-#### `MarkdownPageHandler`
+#### MarkdownPageHandler
+
+Handles `.md` files; extracts frontmatter, renders Markdown.
+
+#### StaticFileHandler
+
+Always returns `None` (catch‑all, non‑Markdown files become static assets).
+
+#### build_page_context
 
 ```rust
-pub struct MarkdownPageHandler;
+pub fn build_page_context(fs: &dyn FileSystem, md_renderer: &dyn MarkdownRenderer,
+    file_path: &Path, content_dir: &Path) -> Result<Option<PageContext>, RawssgError>;
+```
 
-impl ContentHandler for MarkdownPageHandler {
-    fn can_handle(&self, _rel: &Path, orig: &Path) -> bool { ... }
-    fn process(...) -> Result<Option<PageContext>, RawssgError> { ... }
+Skips drafts. Returns a `PageContext` with URL, depth, date formatting.
+
+#### Adding Custom Handlers
+
+```rust
+struct AsciiDocHandler;
+impl ContentHandler for AsciiDocHandler {
+    fn can_handle(&self, _rel: &Path, orig: &Path) -> bool {
+        orig.extension().map_or(false, |e| e == "adoc")
+    }
+    fn process(&self, fs: &dyn FileSystem, _md: &dyn MarkdownRenderer, ...) -> Result<Option<PageContext>, RawssgError> {
+        let content = fs.read_to_string(file_path)?;
+        let html = asciidoc_render(&content);
+        Ok(Some(PageContext { content_html: html, .. }))
+    }
 }
+let builder = SiteBuilder::new().add_handler(Box::new(AsciiDocHandler));
 ```
-
-Handles `.md` files. Extracts frontmatter, renders Markdown, and returns a `PageContext`.
-
-#### `StaticFileHandler`
-
-```rust
-pub struct StaticFileHandler;
-
-impl ContentHandler for StaticFileHandler { ... }
-```
-
-A catch‑all that always returns `None`. Included by default so that non‑Markdown files
-don't cause warnings – they are copied as static assets later.
-
-#### `build_page_context`
-
-```rust
-pub fn build_page_context(
-    fs: &dyn FileSystem,
-    markdown_renderer: &dyn MarkdownRenderer,
-    file_path: &Path,
-    content_dir: &Path,
-) -> Result<Option<PageContext>, RawssgError>;
-```
-
-Low‑level function that validates the path, reads the file, parses frontmatter,
-renders Markdown, and constructs a `PageContext`. Drafts are automatically skipped.
-
----
 
 ### Site Builder
 
-#### `SiteBuilder`
+#### SiteBuilder
 
 ```rust
-pub struct SiteBuilder { ... }
-
-impl SiteBuilder {
-    pub fn new() -> Self;
-    pub fn config(self, config: RawssgConfig) -> Self;
-    pub fn load_config<P: AsRef<Path> + Send + Sync>(self, path: P) -> Result<Self, RawssgError>;
-    pub fn content_dir(self, dir: impl Into<PathBuf>) -> Self;
-    pub fn output_dir(self, dir: impl Into<PathBuf>) -> Self;
-    pub fn with_fs(self, fs: Box<dyn FileSystem>) -> Self;
-    pub fn with_markdown_renderer(self, md: Box<dyn MarkdownRenderer>) -> Self;
-    pub fn with_template_renderer(self, tr: Box<dyn TemplateRenderer>) -> Self;
-    pub fn add_handler(self, handler: Box<dyn ContentHandler>) -> Self;
-    pub fn build(self) -> Result<Site, RawssgError>;
-}
+SiteBuilder::new()
+    .config(config)
+    .load_config("config.yml")?        // alternative to .config()
+    .content_dir("my_content")
+    .output_dir("public")
+    .with_fs(Box::new(RealFs))
+    .with_markdown_renderer(Box::new(PulldownMarkdown))
+    .with_template_renderer(Box::new(TeraRenderer::new()))
+    .with_feed_context_builder(Box::new(TeraFeedContextBuilder))
+    .with_sitemap_context_builder(Box::new(TeraSitemapContextBuilder))
+    .add_handler(Box::new(MyHandler))
+    .build()?;
 ```
 
-The entry point for constructing a site. `build()` validates the configuration, processes all
-content files using the registered handlers, sorts blog posts by date, generates list pages
-(if enabled), and returns a `Site` that is ready to be generated.
+- `content_dir`, `output_dir` can be overridden by config values if left as default (`"content"`, `"dist"`).
+- `feed_context_builder` and `sitemap_context_builder` are only required when the corresponding generator is enabled.
 
-#### `Site`
+#### Site
 
 ```rust
-pub struct Site { ... }
-
-impl Site {
-    pub fn pages(&self) -> &[PageContext];
-    pub fn generate(self) -> Result<(), RawssgError>;
-}
+let pages: &[PageContext] = site.pages();
+site.generate()?;   // atomic write to output_dir
 ```
 
-The compiled site representation. `generate()`:
-- Writes all HTML pages to the output directory.
-- Copies static assets from the configured static directory.
-- Copies non‑Markdown files from the content directory (images, CSS, etc.).
-- Optionally generates RSS feed and sitemap (when the `tera` feature is enabled).
-- Uses an atomic write strategy (writes to a temporary directory, then renames).
+`generate()`:
 
----
+1. Writes all pages (HTML) to `output_dir`.
+2. Copies static assets from `static_dir`.
+3. Copies non‑Markdown files from `content_dir`.
+4. Optionally generates RSS and sitemap (if `tera` feature + enabled).
+5. Uses atomic write: temp dir → rename (with cross‑device fallback).
+
+#### Atomic Generation & Cross-Device Fallback
+
+If `rename` fails with `CrossesDevices`, the library performs a recursive copy and then deletes the temporary directory.
 
 ### Feed & Sitemap
 
-All feed and sitemap functions are available only with the **`tera`** feature.
-
-#### `generate_feed`
+#### generate_feed and generate_sitemap
 
 ```rust
-pub fn generate_feed(
-    renderer: &dyn TemplateRenderer,
-    config: &RawssgConfig,
-    posts: &[&PageContext],
-    base_url: &str,
-    context_builder: &dyn FeedContextBuilder,
-) -> Result<String, RawssgError>;
+pub fn generate_feed(renderer: &dyn TemplateRenderer, config: &RawssgConfig,
+    posts: &[&PageContext], base_url: &str, context_builder: &dyn FeedContextBuilder) -> Result<String, RawssgError>;
+pub fn generate_sitemap(renderer: &dyn TemplateRenderer, config: &RawssgConfig,
+    pages: &[PageContext], base_url: &str, context_builder: &dyn SitemapContextBuilder) -> Result<String, RawssgError>;
 ```
 
-Generates an RSS feed string using the configured RSS template and context builder.
+Callers are responsible for writing the returned string to the output file; `Site::generate` does this automatically.
 
-#### `generate_sitemap`
-
-```rust
-pub fn generate_sitemap(
-    renderer: &dyn TemplateRenderer,
-    config: &RawssgConfig,
-    pages: &[PageContext],
-    base_url: &str,
-    context_builder: &dyn SitemapContextBuilder,
-) -> Result<String, RawssgError>;
-```
-
-Generates a sitemap XML string.
-
-#### Context builders
+#### Context Builders
 
 ```rust
 pub trait FeedContextBuilder: Send + Sync {
-    fn build_feed_context(
-        &self, config: &RawssgConfig, posts: &[&PageContext], base_url: &str
-    ) -> Result<Box<dyn Context>, RawssgError>;
-}
-
-pub trait SitemapContextBuilder: Send + Sync {
-    fn build_sitemap_context(
-        &self, config: &RawssgConfig, pages: &[PageContext], base_url: &str
-    ) -> Result<Box<dyn Context>, RawssgError>;
+    fn build_feed_context(&self, config: &RawssgConfig, posts: &[&PageContext], base_url: &str)
+        -> Result<Box<dyn Context>, RawssgError>;
 }
 ```
 
-Default Tera implementations are provided:
-- `TeraFeedContextBuilder` – inserts `site`, `posts`, `base_url`.
-- `TeraSitemapContextBuilder` – inserts `site`, `pages`, `base_url`.
-
-You can implement custom builders to inject additional context variables.
-
----
+Default Tera implementations insert `site`, `posts`/`pages`, and `base_url`. Custom builders can add extra variables (e.g., `ctx.insert("custom", &"value")`).
 
 ### Utility Functions
 
-#### `safe_path`
+#### safe_path
 
 ```rust
-pub fn safe_path(
-    fs: &dyn FileSystem,
-    base: &Path,
-    candidate: &Path,
-) -> Result<PathBuf, RawssgError>;
+pub fn safe_path(fs: &dyn FileSystem, base: &Path, candidate: &Path) -> Result<PathBuf, RawssgError>;
 ```
 
-Validates that `candidate` resolves inside `base`. It canonicalises both paths, resolves `..` and `.`,
-and returns the safe canonical path. Emits a `PathTraversal` error if the path escapes `base`.
+- Canonicalises `base`.
+- For existing files: canonicalises the candidate, checks it stays inside `base`.
+- For non‑existent files (output): canonicalises the parent directory and verifies confinement.
+- Returns an absolute, safe path.
 
-#### `normalize_path`
+#### slugify
 
-```rust
-fn normalize_path(path: &Path) -> PathBuf;
-```
+Converts a string to lowercase, alphanumeric + hyphens. Example: `"Hello World!"` → `"hello-world"`.
 
-Pure path normalisation that removes `.` and resolves `..` without touching the filesystem.
+#### relative_prefix
 
-#### `slugify`
+Returns `"./"` for depth 0, `"../"` repeated for deeper paths.
 
-```rust
-pub fn slugify(title: &str) -> String;
-```
+#### match_pattern
 
-Converts a string to a URL‑friendly slug: lowercase, alphanumerics and hyphens only.
-
-#### `relative_prefix`
-
-```rust
-pub fn relative_prefix(depth: usize) -> String;
-```
-
-Returns a relative path prefix for the given directory depth (`"./"` for depth 0, `"../"` for depth 1, etc.).
-
-#### `match_pattern`
-
-```rust
-pub fn match_pattern(pattern: &str, path: &Path) -> bool;
-```
-
-Matches a path against a glob‑like pattern. Supports `*` (single segment wildcard) and `**` (multi‑segment wildcard).
-
----
+Glob matching with `*` (single segment) and `**` (multi‑segment). Correctly handles patterns like `blog/**/*.html`.
 
 ### Type Reference
 
-#### `RawssgConfig`
+#### RawssgConfig
 
 ```rust
 pub struct RawssgConfig {
@@ -592,21 +500,15 @@ pub struct RawssgConfig {
     pub content_types: Vec<ContentTypeDef>,
     pub generators: GeneratorsConfig,
 }
-
-impl RawssgConfig {
-    pub fn validate(&self) -> Result<(), RawssgError>;
-}
 ```
 
-Top‑level configuration. `validate()` checks that `site_name` is not empty, at least one content type is defined,
-all patterns are valid globs, and required generator fields are present when enabled.
+- `validate()` ensures invariants.
+- `Default` now includes one content type.
 
-#### `GlobalConfig`
+#### GlobalConfig
 
 ```rust
 pub struct GlobalConfig {
-    pub navbar: Vec<NavItem>,
-    pub sidebar: Vec<NavItem>,
     pub site_name: String,            // default "rawssg"
     pub description: Option<String>,
     pub language: Option<String>,     // default Some("en")
@@ -614,12 +516,12 @@ pub struct GlobalConfig {
     pub author: Option<String>,
     pub repo_url: Option<String>,
     pub license: Option<String>,
+    pub navbar: Vec<NavItem>,
+    pub sidebar: Vec<NavItem>,
 }
 ```
 
-Site‑wide metadata available in templates.
-
-#### `BuildConfig`
+#### BuildConfig
 
 ```rust
 pub struct BuildConfig {
@@ -630,72 +532,50 @@ pub struct BuildConfig {
 }
 ```
 
-#### `ContentTypeDef`
+#### ContentTypeDef
 
 ```rust
 pub struct ContentTypeDef {
     pub name: String,
-    pub pattern: String,          // glob pattern
+    pub pattern: String,          // glob
     pub template: String,
     pub list_template: Option<String>,
     pub list_enabled: bool,
 }
 ```
 
-Defines a content type. If `list_enabled` is `true`, a list page (e.g., `blog/index.html`)
-is automatically created from all pages of that type.
-
-#### `GeneratorsConfig`
+#### GeneratorsConfig & GeneratorDef
 
 ```rust
-pub struct GeneratorsConfig {
-    pub rss: GeneratorDef,
-    pub sitemap: GeneratorDef,
-}
-```
-
-#### `GeneratorDef`
-
-```rust
+pub struct GeneratorsConfig { pub rss: GeneratorDef, pub sitemap: GeneratorDef }
 pub struct GeneratorDef {
-    pub enabled: bool,      // default true
+    pub enabled: bool,      // default false
     pub path: String,
     pub template: String,
 }
 ```
 
-Configuration for RSS and sitemap generation. Both default to enabled, but require explicit
-`path` and `template` when active.
-
-#### `NavItem`
+#### NavItem
 
 ```rust
-pub struct NavItem {
-    pub label: String,
-    pub url: String,
-}
+pub struct NavItem { pub label: String, pub url: String }
 ```
 
-Used in `navbar` and `sidebar` of `GlobalConfig`.
-
-#### `PageFrontMatter`
+#### PageFrontMatter
 
 ```rust
 pub struct PageFrontMatter {
     pub title: String,
     pub desc: String,
     pub author: Option<String>,
-    pub repo_url: Option<String>,
-    pub license: Option<String>,
     pub date: Option<NaiveDate>,
     pub tags: Vec<String>,
     pub draft: bool,
+    // ...
 }
 ```
 
-Parsed from the YAML frontmatter block. Only `title` and `desc` are required.
-
-#### `PageContext`
+#### PageContext
 
 ```rust
 pub struct PageContext {
@@ -704,92 +584,99 @@ pub struct PageContext {
     pub url: String,
     pub file_path: String,
     pub depth: usize,
-    pub pub_date: Option<String>,   // RFC 2822 if date present
+    pub pub_date: Option<String>,
     pub content_type: String,
     pub is_list: bool,
     pub list_items: Option<Vec<PageContext>>,
 }
 ```
 
-Fully processed representation of a page.
-
----
-
 ### Dev Server & Watcher (serve feature)
 
-Enable the **`serve`** feature to get a built‑in development server with live reload.
-
 ```rust
-// Starting the dev server
 use librawssg::serve::start_dev_server;
-
 start_dev_server(Path::new("dist"), 8080)?;
 ```
 
-The server:
-- Serves files from the output directory with correct MIME types.
-- Returns 404 for missing files and 500 for internal errors.
-- Handles each request in a separate thread.
-
-A file watcher is also available:
+- Serves files with correct MIME types (including `text/plain` for `.txt`, `.md`, `.yaml`).
+- 404 for missing, 500 for internal errors.
 
 ```rust
-use librawssg::serve::watcher::watch_dirs;
-
-let _watcher = watch_dirs(&[PathBuf::from("content"), PathBuf::from("templates")], || {
-    println!("Change detected – rebuild!");
-})?;
+use librawssg::serve::watch_dirs;
+let _watcher = watch_dirs(&[content_path, templates_path], || { rebuild(); })?;
 ```
 
-It uses the `notify` crate and triggers the closure on `Modify`, `Create`, or `Remove` events.
+Uses `notify` to trigger on `Modify`, `Create`, `Remove`.
 
 ---
 
 ## Feature Flags
 
-| Feature    | Description                                                                 |
-|------------|-----------------------------------------------------------------------------|
-| `tera`     | Enables built‑in `TeraRenderer` and context builders (depends on `tera`)   |
-| `pulldown` | Enables built‑in `PulldownMarkdown` (depends on `pulldown-cmark`)          |
-| `serve`    | Enables the dev server and file watcher (depends on `tiny_http`, `notify`) |
+| Feature    | Deps                 | Description                      |
+| ---------- | -------------------- | -------------------------------- |
+| `tera`     | `tera`               | `TeraRenderer`, context builders |
+| `pulldown` | `pulldown-cmark`     | `PulldownMarkdown`               |
+| `serve`    | `tiny_http`,`notify` | Dev server + file watcher        |
 
-All features are disabled by default. Enable only what you need.
+All disabled by default.
 
 ---
 
 ## Security
 
-- **Path confinement**: `safe_path` prevents directory traversal by canonicalizing and normalizing all paths.
-- **Atomic output**: `Site::generate` writes to a temp directory and renames on success, leaving the previous output intact on failure.
-- **Strict configuration**: unknown YAML keys are rejected; content type patterns are validated via `glob::Pattern`.
-- **No symlink following**: the library works exclusively with canonical paths and does not follow symbolic links.
+- **Path confinement**: `safe_path` prevents directory traversal for both existing and new files.
+- **Atomic output**: Temp directory → rename; fallback copy‑and‑delete ensures atomicity across devices.
+- **Configuration validation**: All YAML keys are known; glob patterns are validated.
+- **Trait‑based I/O**: Every disk access goes through `FileSystem`, allowing sandboxing and auditing.
+
+---
+
+## Full Customisation
+
+Every core component is a trait. You can:
+
+- **Filesystem**: Implement `FileSystem` to read from database, in‑memory store, or network.
+- **Markdown**: Any parser via `MarkdownRenderer`.
+- **Templates**: Any engine via `TemplateRenderer` + `Context`.
+- **Content handlers**: Add new file processors (e.g., AsciiDoc, reStructuredText).
+- **Feed/Sitemap**: Custom context builders inject arbitrary variables.
+- **Site generation**: Use `SiteBuilder` to build `Site`, then replace `generate()` with your own logic.
+
+### Step‑by‑Step: Building a Fully Custom SSG
+
+1. **Define your custom types** – implement the required traits.
+2. **Load configuration** – use `YamlConfigLoader` or build `RawssgConfig` programmatically.
+3. **Instantiate `SiteBuilder`** with your custom implementations.
+4. **Call `.build()`** to obtain a `Site`.
+5. **Generate** using `site.generate()`, or iterate over `site.pages()` for custom output.
 
 ---
 
 ## Testing
 
-Run the full test suite with:
-
 ```bash
-cargo fmt --all
+cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
-cargo test
-cargo test --features tera,pulldown
-cargo test --features serve
+cargo test --workspace --all-features
 ```
 
-The test suite includes a comprehensive mock filesystem (`MockFs`) and mock renderers
-(in `tests/common/mod.rs`) to help you write your own integration tests.
+The test suite includes:
+
+- `MockFs` – full mock filesystem (with `rename`).
+- Mock renderers.
+- Property‑based tests (`proptest`).
+- Integration tests: full generation, drafts, blog lists, RSS/sitemap errors.
+- Dynamic port allocation for server tests.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on
-code style, commit messages, and the pull request process.
+Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.  
+All contributions are welcome – issues, PRs, documentation improvements.
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+MIT. See [`LICENSE`](LICENSE).
