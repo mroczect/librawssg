@@ -1,5 +1,5 @@
 #[cfg(feature = "serve")]
-use notify::{Event, RecursiveMode, Watcher};
+use notify::{RecursiveMode, Watcher};
 #[cfg(feature = "serve")]
 use std::path::PathBuf;
 #[cfg(feature = "serve")]
@@ -12,14 +12,16 @@ where
 {
     let (tx, rx) = mpsc::channel();
     let watcher_tx = tx.clone();
-    let mut watcher = notify::recommended_watcher(move |res| {
-        if let Ok(event) = res {
-            if matches!(
+    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+        if let Ok(event) = res
+            && matches!(
                 event.kind,
-                notify::EventKind::Modify(_) | notify::EventKind::Create(_) | notify::EventKind::Remove(_)
-            ) {
-                let _ = watcher_tx.send(());
-            }
+                notify::EventKind::Modify(_)
+                    | notify::EventKind::Create(_)
+                    | notify::EventKind::Remove(_)
+            )
+        {
+            let _ = watcher_tx.send(());
         }
     })?;
 
