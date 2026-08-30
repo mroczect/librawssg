@@ -210,6 +210,8 @@ fn default_false() -> bool {
 pub struct NavItem {
     pub label: String,
     pub url: String,
+    #[serde(default)]
+    pub children: Vec<NavItem>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
