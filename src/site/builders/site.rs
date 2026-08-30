@@ -43,7 +43,7 @@ impl Site {
         if self.fs.exists(&self.output_dir) {
             self.fs.remove_dir_all(&self.output_dir)?;
         }
-        std::fs::rename(&tmp_dir, &self.output_dir).or_else(|e| {
+        self.fs.rename(&tmp_dir, &self.output_dir).or_else(|e| {
             if e.kind() == io::ErrorKind::CrossesDevices {
                 self.copy_dir_all(&tmp_dir, &self.output_dir)?;
                 self.fs.remove_dir_all(&tmp_dir)?;
@@ -73,12 +73,7 @@ impl Site {
             let template = self.template_for_page(page);
             let html = self.renderer.render(&template, &*ctx)?;
 
-            let candidate = Path::new(&page.url);
-            let out_path = safe_path(self.fs.as_ref(), output_base, candidate)?;
-            if let Some(parent) = out_path.parent() {
-                self.fs.create_dir_all(parent)?;
-            }
-            self.fs.write(&out_path, html.as_bytes())?;
+            self.write_page_output(output_base, page, &html)?;
         }
 
         for page in &self.pages {
@@ -96,12 +91,7 @@ impl Site {
             let template = self.template_for_page(page);
             let html = self.renderer.render(&template, &*ctx)?;
 
-            let candidate = Path::new(&page.url);
-            let out_path = safe_path(self.fs.as_ref(), output_base, candidate)?;
-            if let Some(parent) = out_path.parent() {
-                self.fs.create_dir_all(parent)?;
-            }
-            self.fs.write(&out_path, html.as_bytes())?;
+            self.write_page_output(output_base, page, &html)?;
         }
 
         if let Some(ref dir) = static_dir
@@ -130,15 +120,8 @@ impl Site {
                             &self.base_url,
                             &**feed_builder,
                         )?;
-                        let feed_path = safe_path(
-                            self.fs.as_ref(),
-                            output_base,
-                            Path::new(&self.config.generators.rss.path),
-                        )?;
-                        if let Some(parent) = feed_path.parent() {
-                            self.fs.create_dir_all(parent)?;
-                        }
-                        self.fs.write(&feed_path, rss.as_bytes())?;
+                        let rss_path = Path::new(&self.config.generators.rss.path);
+                        self.write_generated_file(output_base, rss_path, rss.as_bytes())?;
                     }
                 } else {
                     return Err(RawssgError::Internal(
@@ -156,15 +139,8 @@ impl Site {
                         &self.base_url,
                         &**sitemap_builder,
                     )?;
-                    let sitemap_path = safe_path(
-                        self.fs.as_ref(),
-                        output_base,
-                        Path::new(&self.config.generators.sitemap.path),
-                    )?;
-                    if let Some(parent) = sitemap_path.parent() {
-                        self.fs.create_dir_all(parent)?;
-                    }
-                    self.fs.write(&sitemap_path, sitemap.as_bytes())?;
+                    let sitemap_path = Path::new(&self.config.generators.sitemap.path);
+                    self.write_generated_file(output_base, sitemap_path, sitemap.as_bytes())?;
                 } else {
                     return Err(RawssgError::Internal(
                         "Sitemap enabled but no sitemap context builder provided".into(),
@@ -173,6 +149,37 @@ impl Site {
             }
         }
 
+        Ok(())
+    }
+
+    fn write_page_output(
+        &self,
+        output_base: &Path,
+        page: &PageContext,
+        html: &str,
+    ) -> Result<(), RawssgError> {
+        let candidate = Path::new(&page.url);
+        if let Some(parent_rel) = candidate.parent() {
+            let parent_out = output_base.join(parent_rel);
+            self.fs.create_dir_all(&parent_out)?;
+        }
+        let out_path = safe_path(self.fs.as_ref(), output_base, candidate)?;
+        self.fs.write(&out_path, html.as_bytes())?;
+        Ok(())
+    }
+    #[cfg(feature = "tera")]
+    fn write_generated_file(
+        &self,
+        output_base: &Path,
+        rel_path: &Path,
+        content: &[u8],
+    ) -> Result<(), RawssgError> {
+        if let Some(parent_rel) = rel_path.parent() {
+            let parent_out = output_base.join(parent_rel);
+            self.fs.create_dir_all(&parent_out)?;
+        }
+        let out_path = safe_path(self.fs.as_ref(), output_base, rel_path)?;
+        self.fs.write(&out_path, content)?;
         Ok(())
     }
 
@@ -246,11 +253,7 @@ impl Site {
             let rel = entry
                 .strip_prefix(static_dir)
                 .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
-            let dest = safe_path(self.fs.as_ref(), output_base, rel)?;
-            if let Some(parent) = dest.parent() {
-                self.fs.create_dir_all(parent)?;
-            }
-            self.fs.copy_file(&entry, &dest)?;
+            self.copy_asset_to_output(output_base, rel, &entry)?;
         }
         Ok(())
     }
@@ -270,12 +273,23 @@ impl Site {
             let rel = entry
                 .strip_prefix(content_dir)
                 .map_err(|e| RawssgError::SiteGeneration(e.to_string()))?;
-            let dest = safe_path(self.fs.as_ref(), output_base, rel)?;
-            if let Some(parent) = dest.parent() {
-                self.fs.create_dir_all(parent)?;
-            }
-            self.fs.copy_file(&entry, &dest)?;
+            self.copy_asset_to_output(output_base, rel, &entry)?;
         }
+        Ok(())
+    }
+
+    fn copy_asset_to_output(
+        &self,
+        output_base: &Path,
+        rel: &Path,
+        source: &Path,
+    ) -> Result<(), RawssgError> {
+        if let Some(parent_rel) = rel.parent() {
+            let parent_out = output_base.join(parent_rel);
+            self.fs.create_dir_all(&parent_out)?;
+        }
+        let dest = safe_path(self.fs.as_ref(), output_base, rel)?;
+        self.fs.copy_file(source, &dest)?;
         Ok(())
     }
 
