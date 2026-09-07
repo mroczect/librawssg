@@ -1,7 +1,13 @@
 [package]
 name = "librawssg_handler"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
+description = "Content processing contracts for the librawssg static site generator"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "static-site-generator", "content", "processor", "traits"]
+categories = ["development-tools::build-utils"]
 
 [dependencies]
 

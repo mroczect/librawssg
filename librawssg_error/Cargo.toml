@@ -1,15 +1,16 @@
 [package]
-name = "librawssg_templates"
+name = "librawssg_error"
 version = "1.0.0"
 edition = "2024"
-description = "Template rendering contracts for the librawssg static site generator"
+description = "Unified error types for the librawssg static site generator"
 license = "MIT"
 repository = "https://github.com/mroczect/librawssg"
 readme = "README.md"
-keywords = ["ssg", "static-site-generator", "template", "renderer", "traits"]
+keywords = ["ssg", "static-site-generator", "error", "thiserror"]
 categories = ["development-tools::build-utils"]
 
 [dependencies]
+thiserror = "2.0.20"
 
 [lints]
 workspace = true
