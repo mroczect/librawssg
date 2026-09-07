@@ -9,60 +9,69 @@ pub fn match_pattern(pattern: &str, path: &Path) -> bool {
 }
 
 fn match_pattern_slice(pattern: &[&str], segments: &[&str]) -> bool {
-    if pattern.is_empty() {
-        return segments.is_empty();
-    }
-    if segments.is_empty() {
-        return pattern.iter().all(|&p| p == "**");
-    }
-
-    match pattern[0] {
-        "**" => {
-            if pattern.len() == 1 {
-                return true;
-            }
-            for i in 0..segments.len() {
-                if match_pattern_slice(&pattern[1..], &segments[i..]) {
+    match (pattern.first(), segments.first()) {
+        (None, None) => true,
+        (Some(_), None) => pattern.iter().all(|&p| p == "**"),
+        (None, Some(_)) => false,
+        (Some(&first_pat), Some(&first_seg)) => {
+            if first_pat == "**" {
+                if pattern.len() == 1 {
                     return true;
                 }
+                let Some(rest_pattern) = pattern.get(1..) else {
+                    return false;
+                };
+                for i in 0..segments.len() {
+                    let Some(rest_segments) = segments.get(i..) else {
+                        continue;
+                    };
+                    if match_pattern_slice(rest_pattern, rest_segments) {
+                        return true;
+                    }
+                }
+                false
+            } else if segment_matches(first_pat, first_seg) {
+                match (pattern.get(1..), segments.get(1..)) {
+                    (Some(next_pattern), Some(next_segments)) => {
+                        match_pattern_slice(next_pattern, next_segments)
+                    }
+                    _ => false,
+                }
+            } else {
+                false
             }
-            false
-        }
-        pat => {
-            if !segment_matches(pat, segments[0]) {
-                return false;
-            }
-            match_pattern_slice(&pattern[1..], &segments[1..])
         }
     }
 }
 
 fn segment_matches(pattern: &str, segment: &str) -> bool {
-    let mut pattern_chars = pattern.chars();
-    let mut segment_chars = segment.chars();
+    let mut pattern_iter = pattern.chars();
+    let mut segment_iter = segment.chars();
 
     loop {
-        match pattern_chars.next() {
+        match pattern_iter.next() {
             Some('*') => {
-                let rest_of_pattern: String = pattern_chars.clone().collect();
-                if rest_of_pattern.is_empty() {
+                let rest: String = pattern_iter.clone().collect();
+                if rest.is_empty() {
                     return true;
                 }
-                let mut remaining_segment: String = segment_chars.clone().collect();
-                while !remaining_segment.is_empty() {
-                    if segment_matches(&rest_of_pattern, &remaining_segment) {
+                let mut remaining: String = segment_iter.clone().collect();
+                while !remaining.is_empty() {
+                    if segment_matches(&rest, &remaining) {
                         return true;
                     }
-                    segment_chars.next();
-                    remaining_segment = segment_chars.clone().collect();
+                    if segment_iter.next().is_none() {
+                        break;
+                    }
+                    remaining = segment_iter.clone().collect();
                 }
                 return false;
             }
-            Some(pc) => match segment_chars.next() {
-                Some(sc) if pc == sc => continue,
+            Some(pc) => match segment_iter.next() {
+                Some(sc) if pc == sc => {}
                 _ => return false,
             },
-            None => return segment_chars.next().is_none(),
+            None => return segment_iter.next().is_none(),
         }
     }
 }
