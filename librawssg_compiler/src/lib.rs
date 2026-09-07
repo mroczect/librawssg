@@ -11,5 +11,7 @@ pub use context::ContextBuilder;
 pub use generator::Generator;
 pub use pipeline::Pipeline;
 
-#[cfg(feature = "tera")]
 pub use context::TeraContextBuilder;
+
+#[cfg(test)]
+use tempfile as _;
