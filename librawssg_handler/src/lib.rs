@@ -1,3 +1,5 @@
+#![allow(clippy::multiple_crate_versions)]
+
 pub mod document;
 pub mod metadata;
 pub mod processor;
