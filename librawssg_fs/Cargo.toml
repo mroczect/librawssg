@@ -1,0 +1,15 @@
+[package]
+name = "librawssg_fs"
+version = "1.0.0"
+edition = "2024"
+description = "Filesystem abstraction for the librawssg static site generator"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "static-site-generator", "filesystem", "io"]
+categories = ["development-tools::build-utils"]
+
+[dependencies]
+
+[lints]
+workspace = true
