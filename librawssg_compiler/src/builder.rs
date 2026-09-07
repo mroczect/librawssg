@@ -1,14 +1,15 @@
 use super::ContextBuilder;
-use super::processor::Processor;
 use crate::generator::Generator;
 use crate::pipeline::Pipeline;
 use librawssg_config::Config;
 use librawssg_error::Result;
 use librawssg_fs::FileSystem;
 use librawssg_fs::RealFs;
+use librawssg_handler::Processor;
 use librawssg_templates::Renderer;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+#[allow(missing_debug_implementations)]
 pub struct PipelineBuilder {
     config: Config,
     content_dir: PathBuf,
@@ -41,7 +42,7 @@ impl PipelineBuilder {
         self
     }
 
-    pub fn load_config<P: AsRef<std::path::Path> + Send + Sync>(mut self, path: P) -> Result<Self> {
+    pub fn load_config<P: AsRef<Path> + Send + Sync>(mut self, path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())
             .map_err(|e| librawssg_error::Error::Config(e.to_string()))?;
         self.config = Config::from_yaml_str(&content)?;
@@ -93,10 +94,10 @@ impl PipelineBuilder {
     pub fn build(mut self) -> Result<Pipeline> {
         self.config.validate()?;
 
-        if self.content_dir == PathBuf::from("content") {
+        if self.content_dir.as_path() == Path::new("content") {
             self.content_dir = PathBuf::from(&self.config.build.content_dir);
         }
-        if self.output_dir == PathBuf::from("dist") {
+        if self.output_dir.as_path() == Path::new("dist") {
             self.output_dir = PathBuf::from(&self.config.build.output_dir);
         }
 
