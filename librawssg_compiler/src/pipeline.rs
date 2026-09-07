@@ -3,16 +3,17 @@ use crate::pattern::match_pattern;
 use librawssg_config::Config;
 use librawssg_error::{Error, Result};
 use librawssg_fs::FileSystem;
-use librawssg_handler::Document;
+use librawssg_handler::{Document, Metadata, Processor};
 use librawssg_templates::Renderer;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+#[allow(missing_debug_implementations)]
 pub struct Pipeline {
     pub(crate) config: Config,
     pub(crate) fs: Box<dyn FileSystem>,
     pub(crate) renderer: Box<dyn Renderer>,
-    pub(crate) processors: Vec<Box<dyn crate::processor::Processor>>,
+    pub(crate) processors: Vec<Box<dyn Processor>>,
     pub(crate) context_builder: Box<dyn ContextBuilder>,
     pub(crate) generators: Vec<Box<dyn crate::generator::Generator>>,
     pub(crate) content_dir: PathBuf,
@@ -74,41 +75,38 @@ impl Pipeline {
                 .content_rules
                 .iter()
                 .find(|r| r.name == *content_type)
+                && rule.list_enabled
+                && !docs.is_empty()
+                && let Some(list_template) = &rule.list_template
             {
-                if rule.list_enabled && !docs.is_empty() {
-                    if let Some(list_template) = &rule.list_template {
-                        let list_doc = Document {
-                            metadata: librawssg_handler::Metadata {
-                                title: content_type.clone(),
-                                ..Default::default()
-                            },
-                            body: String::new(),
-                            url: format!("{}/index.html", content_type),
-                            output_path: PathBuf::from(format!("{}/index.html", content_type)),
-                            source_path: PathBuf::new(),
-                            depth: 1,
-                            content_type: content_type.clone(),
-                            is_list: true,
-                            list_items: Some(docs.clone()),
-                            taxonomies: HashMap::new(),
-                        };
-                        self.render_document_with_template(output_base, &list_doc, list_template)?;
-                    }
-                }
+                let metadata = Metadata::new(content_type.clone(), String::new())?;
+                let list_doc = Document::new(
+                    metadata,
+                    String::new(),
+                    format!("{}/index.html", content_type),
+                    PathBuf::from(format!("{}/index.html", content_type)),
+                    PathBuf::from("__list__"),
+                    1,
+                    content_type.clone(),
+                    true,
+                )?
+                .with_list_items(docs.clone());
+                self.render_document_with_template(output_base, &list_doc, list_template)?;
             }
         }
 
-        if self.fs.exists(Path::new(&self.config.build.static_dir)) {
-            self.copy_dir_all(
-                Path::new(&self.config.build.static_dir),
-                &output_base.join(&self.config.build.static_dir),
-            )?;
+        let static_src = Path::new(&self.config.build.static_dir);
+        if self.fs.exists(static_src) {
+            let static_name = static_src
+                .file_name()
+                .unwrap_or_else(|| std::ffi::OsStr::new("static"));
+            let static_dest = output_base.join(static_name);
+            self.copy_dir_all(static_src, &static_dest)?;
         }
 
         for generator in &self.generators {
-            generator.generate(self)?;
+            generator.generate(self, output_base)?;
         }
-
         Ok(())
     }
 
@@ -137,7 +135,7 @@ impl Pipeline {
     }
 
     fn determine_content_type(&self, rel: &Path) -> String {
-        for rule in &self.config.content_rules {
+        for rule in self.config.content_rules.iter().rev() {
             if match_pattern(&rule.pattern, rel) {
                 return rule.name.clone();
             }
