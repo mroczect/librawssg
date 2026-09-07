@@ -343,6 +343,7 @@ dependencies = [
  "librawssg_handler",
  "librawssg_templates",
  "tempfile",
+ "tera",
 ]
 
 [[package]]
