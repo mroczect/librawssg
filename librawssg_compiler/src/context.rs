@@ -7,10 +7,9 @@ pub trait ContextBuilder: Send + Sync {
     fn build_context(&self, config: &Config, doc: &Document) -> Result<Box<dyn RenderContext>>;
 }
 
-#[cfg(feature = "tera")]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct TeraContextBuilder;
 
-#[cfg(feature = "tera")]
 impl ContextBuilder for TeraContextBuilder {
     fn build_context(&self, config: &Config, doc: &Document) -> Result<Box<dyn RenderContext>> {
         let mut ctx = tera::Context::new();

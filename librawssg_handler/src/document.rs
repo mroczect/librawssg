@@ -1,9 +1,10 @@
 use crate::Metadata;
 use librawssg_error::{Error, Result};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[non_exhaustive]
 pub struct Document {
     pub metadata: Metadata,
@@ -77,5 +78,11 @@ impl Document {
     #[must_use]
     pub const fn depth(&self) -> usize {
         self.depth
+    }
+
+    #[must_use]
+    pub fn with_list_items(mut self, items: Vec<Self>) -> Self {
+        self.list_items = Some(items);
+        self
     }
 }
