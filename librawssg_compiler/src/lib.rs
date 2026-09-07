@@ -1,14 +1,15 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+#![allow(clippy::multiple_crate_versions)]
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod builder;
+pub mod context;
+pub mod generator;
+pub mod pattern;
+pub mod pipeline;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use builder::PipelineBuilder;
+pub use context::ContextBuilder;
+pub use generator::Generator;
+pub use pipeline::Pipeline;
+
+#[cfg(feature = "tera")]
+pub use context::TeraContextBuilder;
