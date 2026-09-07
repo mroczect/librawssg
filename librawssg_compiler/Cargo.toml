@@ -10,6 +10,14 @@ keywords = ["ssg", "static-site-generator", "pipeline", "builder", "compiler"]
 categories = ["development-tools::build-utils"]
 
 [dependencies]
+librawssg_error = { version = "1.0.0", path = "../librawssg_error" }
+librawssg_fs = { version = "1.0.0", path = "../librawssg_fs" }
+librawssg_config = { version = "1.0.0", path = "../librawssg_config" }
+librawssg_handler = { version = "1.0.0", path = "../librawssg_handler" }
+librawssg_templates = { version = "1.0.0", path = "../librawssg_templates" }
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 workspace = true
