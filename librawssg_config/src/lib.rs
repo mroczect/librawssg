@@ -1,14 +1,16 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+#![allow(clippy::multiple_crate_versions)]
+
+pub mod build;
+pub mod config;
+pub mod content_rule;
+pub mod nav;
+pub mod site;
+
+pub use build::BuildConfig;
+pub use config::Config;
+pub use content_rule::ContentRule;
+pub use nav::NavItem;
+pub use site::SiteConfig;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+use tempfile as _;

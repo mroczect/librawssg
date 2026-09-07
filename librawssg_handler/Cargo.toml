@@ -10,8 +10,8 @@ keywords = ["ssg", "static-site-generator", "content", "processor", "traits"]
 categories = ["development-tools::build-utils"]
 
 [dependencies]
-librawssg_error = { path = "../librawssg_error" }
-librawssg_fs = { path = "../librawssg_fs" }
+librawssg_error = { version = "1.0.0", path = "../librawssg_error" }
+librawssg_fs = { version = "1.0.0", path = "../librawssg_fs" }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
