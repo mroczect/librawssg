@@ -1,0 +1,28 @@
+[package]
+name = "librawssg_templates"
+version = "1.0.0"
+edition = "2024"
+description = "Template rendering contracts for the librawssg static site generator"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "static-site-generator", "template", "renderer", "tera"]
+categories = ["development-tools::build-utils"]
+
+[features]
+default = ["tera"]
+tera = ["dep:tera"]
+
+[dependencies]
+librawssg_error = { version = "1.0.0", path = "../librawssg_error" }
+walkdir = "2.5.0"
+
+[dependencies.tera]
+version = "1.20.0"
+optional = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

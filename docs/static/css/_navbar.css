@@ -1,0 +1,117 @@
+.navbar {
+  background-color: var(--color-navbar-bg);
+  color: var(--color-navbar-text);
+  height: var(--navbar-height);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-navbar-text);
+  text-decoration: none;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.brand:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.nav-links ul {
+  list-style: none;
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  display: block;
+  padding: 0.4rem 0.75rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.nav-links a:hover {
+  color: var(--color-primary);
+  background-color: var(--color-accent);
+  text-decoration: none;
+}
+
+.nav-links a.active {
+  color: var(--color-primary);
+  font-weight: 600;
+  background-color: rgba(13, 110, 253, 0.08);
+}
+
+/* Hamburger button dengan animasi 3 garis */
+.navbar-toggle {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  margin-left: auto;
+  gap: 5px;
+}
+
+.navbar-toggle .bar {
+  width: 22px;
+  height: 2px;
+  background-color: var(--color-navbar-text);
+  transition: 0.3s;
+  border-radius: 2px;
+}
+
+.navbar-toggle[aria-expanded="true"] .bar:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.navbar-toggle[aria-expanded="true"] .bar:nth-child(2) {
+  opacity: 0;
+}
+.navbar-toggle[aria-expanded="true"] .bar:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.theme-toggle {
+  color: var(--color-navbar-text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background-color: var(--color-accent);
+}

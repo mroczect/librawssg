@@ -1,0 +1,81 @@
+.markdown-body {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+.markdown-body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body table {
+  display: block;
+  width: 100%;
+  overflow: auto;
+  margin: 1.25rem 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: var(--color-sidebar-bg);
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.markdown-body tr:nth-child(2n) {
+  background-color: var(--color-accent);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+
+.breadcrumb {
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0;
+  gap: 0.25rem;
+}
+
+.breadcrumb li:not(:last-child)::after {
+  content: "/";
+  margin: 0 0.4rem;
+  color: var(--color-border);
+}
+
+.breadcrumb a {
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb a:hover {
+  color: var(--color-primary);
+}
+
+.breadcrumb span {
+  color: var(--color-text);
+  font-weight: 500;
+}
+

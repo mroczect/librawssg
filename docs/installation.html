@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation | librawssg Docs</title>
+    <meta name="description" content="">
+
+    
+    <script>
+        (function() {
+            const stored = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+
+<!-- Highlight.js themes: light aktif, dark nonaktif default -->
+<link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github.min.css">
+<link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css" disabled>
+
+</head>
+
+<body>
+    <header class="navbar">
+    <div class="navbar-inner">
+        <a href="/" class="brand">librawssg Docs</a>
+        <button class="navbar-toggle" aria-label="Toggle navigation" id="navbar-toggle" aria-expanded="false">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+        <nav class="nav-links" id="nav-links">
+            
+    <ul>
+        
+            <li>
+                <a href="/"
+                   >
+                    Home
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/installation.html"
+                   >
+                    Installation
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/configuration.html"
+                   >
+                    Configuration
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/index.html"
+                   >
+                    API
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/contributing.html"
+                   >
+                    Contributing
+                </a>
+                
+            </li>
+        
+    </ul>
+
+        </nav>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+            <span class="theme-icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+
+    <div class="wrapper">
+        <aside class="sidebar">
+    <div class="sidebar-header">
+        <h2><a href="/">Contents</a></h2>
+        <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">&times;</button>
+    </div>
+    <nav class="sidebar-nav">
+        
+    <ul>
+        
+            <li>
+                <a href="/"
+                   >
+                    Getting Started
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/installation.html"
+                   >
+                    Installation
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/configuration.html"
+                   >
+                    Configuration
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/index.html"
+                   >
+                    API Reference
+                </a>
+                
+                    
+    <ul>
+        
+            <li>
+                <a href="/api/compiler.html"
+                   >
+                    Compiler
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/config.html"
+                   >
+                    Config
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/error.html"
+                   >
+                    Error
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/fs.html"
+                   >
+                    Filesystem
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/handler.html"
+                   >
+                    Handler
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/templates.html"
+                   >
+                    Templates
+                </a>
+                
+            </li>
+        
+    </ul>
+
+                
+            </li>
+        
+            <li>
+                <a href="/contributing.html"
+                   >
+                    Contributing
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/code_of_conduct.html"
+                   >
+                    Code of Conduct
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/license.html"
+                   >
+                    License
+                </a>
+                
+            </li>
+        
+    </ul>
+
+    </nav>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="content">
+            
+            <article class="markdown-body">
+                <h1>Installation</h1>
+
+<p>
+  This guide covers how to install and set up <code>librawssg</code> for building
+  your own static site generator, or for integrating it into an existing Rust
+  project.
+</p>
+
+<h2>Prerequisites</h2>
+
+<ul>
+  <li>
+    <strong>Rust toolchain</strong> – Install the latest stable Rust via
+    <a href="https://rustup.rs/">rustup</a>.
+  </li>
+  <li>
+    <strong>Cargo</strong> – Comes with Rust; used for building and managing
+    dependencies.
+  </li>
+</ul>
+
+<h2>Adding librawssg as a Dependency</h2>
+
+<p>
+  <code>librawssg</code> is a workspace of several crates. The easiest way is to
+  use the facade crate <code>librawssg</code> that re‑exports the essential
+  components.
+</p>
+
+<p>Add the following to your <code>Cargo.toml</code>:</p>
+
+<pre><code class="lang-toml">[dependencies]
+librawssg = "1.0.0"</code></pre>
+
+<p>
+  If you are working within the same workspace as the <code>librawssg</code>
+  source, use a path dependency instead:
+</p>
+
+<pre><code class="lang-toml">[dependencies]
+librawssg = { path = "../librawssg" }</code></pre>
+
+<h2>Feature Flags</h2>
+
+<p>
+  The facade crate re‑exports <code>librawssg_templates</code> with the
+  <code>tera</code> feature enabled by default. This gives you
+  <code>TeraRenderer</code> and <code>TeraContextBuilder</code>. If you want to
+  disable the Tera integration (for a custom renderer), set
+  <code>default-features = false</code>:
+</p>
+
+<pre><code class="lang-toml">[dependencies]
+librawssg = { version = "1.0.0", default-features = false }</code></pre>
+
+<h2>Basic Project Setup</h2>
+
+<p>
+  To create a minimal static site generator using <code>librawssg</code>, follow
+  these steps:
+</p>
+
+<ol>
+  <li>
+    <p>Create a new binary crate:</p>
+    <pre><code>cargo new my-site-generator
+cd my-site-generator</code></pre>
+  </li>
+  <li>
+    <p>Add dependencies to <code>Cargo.toml</code>:</p>
+    <pre><code class="lang-toml">[dependencies]
+librawssg = "1.0.0"</code></pre>
+  </li>
+  <li>
+    <p>Create the necessary directories and files:</p>
+    <pre><code>mkdir -p content templates static</code></pre>
+  </li>
+  <li>
+    <p>Place your content, templates, and static assets in the respective folders.</p>
+  </li>
+  <li>
+    <p>Write a <code>main.rs</code> that builds and runs the pipeline (see example below).</p>
+  </li>
+</ol>
+
+<h2>Minimal Example</h2>
+
+<p>
+  The following example uses a simple raw HTML processor and the Tera renderer.
+  It processes <code>.raw</code> files, renders them with a base template, and
+  copies static files.
+</p>
+
+<pre><code class="lang-rust">use librawssg::{
+    Config, ContentRule, Document, FileSystem, Metadata, PipelineBuilder, Processor,
+    RealFs, TeraContextBuilder, TeraRenderer,
+};
+use std::path::{Path, PathBuf};
+
+struct RawProcessor;
+
+impl Processor for RawProcessor {
+    fn name(&self) -&gt; &'static str {
+        "raw"
+    }
+
+    fn can_process(&self, rel: &Path, _orig: &Path) -> bool {
+        rel.extension().and_then(|e| e.to_str()) == Some("raw")
+    }
+
+    fn process(
+        &self,
+        fs: &dyn FileSystem,
+        rel: &Path,
+        content_dir: &Path,
+    ) -> librawssg::Result&lt;Option&lt;Document&gt;&gt; {
+        let full_path = content_dir.join(rel);
+        let body = fs.read_to_string(&full_path)?;
+        let title = rel.file_stem().unwrap_or_default().to_string_lossy().to_string();
+        let meta = Metadata::new(title, String::new())?;
+        let url = rel.with_extension("html").to_string_lossy().to_string();
+        let output = PathBuf::from(&url);
+        let doc = Document::new(meta, body, url, output, rel.to_path_buf(), 0, "page".to_string(), false)?;
+        Ok(Some(doc))
+    }
+}
+
+fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    // 1. Configure the site
+    let mut config = Config::new().with_site_name("My Site");
+    config.add_content_rule(ContentRule::new("page", "**/*.raw", "base.tera"));
+    config.build.content_dir = "content".into();
+    config.build.output_dir = "dist".into();
+    config.build.static_dir = "static".into();
+
+    // 2. Set up the renderer and load templates
+    let mut renderer = TeraRenderer::new();
+    renderer.load_templates_dir(Path::new("templates"))?;
+
+    // 3. Build the pipeline
+    let pipeline = PipelineBuilder::new()
+        .config(config)
+        .content_dir("content")
+        .output_dir("dist")
+        .with_fs(Box::new(RealFs))
+        .with_renderer(Box::new(renderer))
+        .with_context_builder(Box::new(TeraContextBuilder))
+        .add_processor(Box::new(RawProcessor))
+        .build()?;
+
+    // 4. Run the generation
+    pipeline.run()?;
+    println!("Site generated in 'dist'");
+    Ok(())
+}</code></pre>
+
+<h2>Building the Documentation Site Itself</h2>
+
+<p>
+  The <code>librawssg</code> repository includes a <code>docs</code> crate that
+  generates this documentation website. To build it locally:
+</p>
+
+<pre><code>cargo run -p docs</code></pre>
+
+<p>
+  The output will be written to <code>docs/dist/</code>. You can open
+  <code>index.html</code> to view the site.
+</p>
+
+<h2>Directory Structure</h2>
+
+<p>
+  A typical project using <code>librawssg</code> has the following layout:
+</p>
+
+<pre><code>my-site-generator/
+├── Cargo.toml
+├── content/           # Source content files (.raw, .md, etc.)
+├── templates/         # Tera templates
+├── static/            # Static assets (CSS, JS, images)
+└── src/
+    └── main.rs        # Entry point</code></pre>
+
+<h2>Next Steps</h2>
+
+<ul>
+  <li>Learn how to configure the build in the <a href="configuration.html">Configuration</a> page.</li>
+  <li>Explore the <a href="api/index.html">API Reference</a> for detailed crate documentation.</li>
+  <li>See <a href="contributing.html">Contributing</a> if you want to improve librawssg.</li>
+</ul>
+
+            </article>
+        </main>
+    </div>
+
+    <footer class="footer">
+    <div class="footer-inner">
+        <p>&copy; 2026 librawssg Docs.
+           Licensed under MIT.</p>
+    </div>
+</footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        hljs.highlightAll();
+    });
+</script>
+<script type="module" src="/static/js/main.js"></script>
+
+</body>
+</html>

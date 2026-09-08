@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration | librawssg Docs</title>
+    <meta name="description" content="">
+
+    
+    <script>
+        (function() {
+            const stored = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+
+<!-- Highlight.js themes: light aktif, dark nonaktif default -->
+<link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github.min.css">
+<link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css" disabled>
+
+</head>
+
+<body>
+    <header class="navbar">
+    <div class="navbar-inner">
+        <a href="/" class="brand">librawssg Docs</a>
+        <button class="navbar-toggle" aria-label="Toggle navigation" id="navbar-toggle" aria-expanded="false">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+        <nav class="nav-links" id="nav-links">
+            
+    <ul>
+        
+            <li>
+                <a href="/"
+                   >
+                    Home
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/installation.html"
+                   >
+                    Installation
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/configuration.html"
+                   >
+                    Configuration
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/index.html"
+                   >
+                    API
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/contributing.html"
+                   >
+                    Contributing
+                </a>
+                
+            </li>
+        
+    </ul>
+
+        </nav>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+            <span class="theme-icon">🌙</span>
+        </button>
+    </div>
+</header>
+
+
+    <div class="wrapper">
+        <aside class="sidebar">
+    <div class="sidebar-header">
+        <h2><a href="/">Contents</a></h2>
+        <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">&times;</button>
+    </div>
+    <nav class="sidebar-nav">
+        
+    <ul>
+        
+            <li>
+                <a href="/"
+                   >
+                    Getting Started
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/installation.html"
+                   >
+                    Installation
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/configuration.html"
+                   >
+                    Configuration
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/index.html"
+                   >
+                    API Reference
+                </a>
+                
+                    
+    <ul>
+        
+            <li>
+                <a href="/api/compiler.html"
+                   >
+                    Compiler
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/config.html"
+                   >
+                    Config
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/error.html"
+                   >
+                    Error
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/fs.html"
+                   >
+                    Filesystem
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/handler.html"
+                   >
+                    Handler
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/api/templates.html"
+                   >
+                    Templates
+                </a>
+                
+            </li>
+        
+    </ul>
+
+                
+            </li>
+        
+            <li>
+                <a href="/contributing.html"
+                   >
+                    Contributing
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/code_of_conduct.html"
+                   >
+                    Code of Conduct
+                </a>
+                
+            </li>
+        
+            <li>
+                <a href="/license.html"
+                   >
+                    License
+                </a>
+                
+            </li>
+        
+    </ul>
+
+    </nav>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <main class="content">
+            
+            <article class="markdown-body">
+                <h1>Configuration</h1>
+
+<p>
+  <code>librawssg</code> uses a single configuration file to control the entire
+  build process. This file can be written in YAML or JSON format and contains
+  site settings, directory locations, content processing rules, and custom
+  extra data.
+</p>
+
+<h2>Configuration File Format</h2>
+
+<p>
+  The configuration can be stored as <code>config.yaml</code>,
+  <code>config.yml</code>, or <code>config.json</code>. By default, the
+  <code>PipelineBuilder</code> supports reading YAML via its
+  <code>load_config()</code> method. For JSON, you can manually call
+  <code>Config::from_json_str()</code>.
+</p>
+
+<pre><code># config.yaml
+site:
+  site_name: "My Documentation"
+  description: "A site built with librawssg"
+  language: "en"
+  base_url: "https://example.com"
+  author: "Your Name"
+  repo_url: "https://github.com/username/repo"
+  license: "MIT"
+
+build:
+  content_dir: "content"
+  output_dir: "dist"
+  templates_dir: "templates"
+  static_dir: "static"
+
+content_rules:
+  - name: "page"
+    pattern: "**/*.raw"
+    template: "base.tera"
+    list_enabled: false
+</code></pre>
+
+<h2>Configuration Sections</h2>
+
+<h3><code>site</code></h3>
+
+<p>
+  Contains site metadata and navigation structures. All fields except
+  <code>site_name</code> are optional and have sensible defaults.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>site_name</code></td>
+      <td><code>string</code></td>
+      <td><code>"librawssg"</code></td>
+      <td>The name of the website. Must not be empty or whitespace-only.</td>
+    </tr>
+    <tr>
+      <td><code>description</code></td>
+      <td><code>string | null</code></td>
+      <td><code>null</code></td>
+      <td>A short description of the site.</td>
+    </tr>
+    <tr>
+      <td><code>language</code></td>
+      <td><code>string | null</code></td>
+      <td><code>"en"</code></td>
+      <td>Site language code (e.g., <code>"en"</code>, <code>"id"</code>).</td>
+    </tr>
+    <tr>
+      <td><code>base_url</code></td>
+      <td><code>string | null</code></td>
+      <td><code>null</code></td>
+      <td>The base URL of the site. Must start with <code>http://</code> or <code>https://</code> if set.</td>
+    </tr>
+    <tr>
+      <td><code>author</code></td>
+      <td><code>string | null</code></td>
+      <td><code>null</code></td>
+      <td>Default author name.</td>
+    </tr>
+    <tr>
+      <td><code>repo_url</code></td>
+      <td><code>string | null</code></td>
+      <td><code>null</code></td>
+      <td>URL to the source repository.</td>
+    </tr>
+    <tr>
+      <td><code>license</code></td>
+      <td><code>string | null</code></td>
+      <td><code>null</code></td>
+      <td>License identifier (e.g., <code>"MIT"</code>).</td>
+    </tr>
+    <tr>
+      <td><code>navbar</code></td>
+      <td><code>array&lt;NavItem&gt;</code></td>
+      <td><code>[]</code></td>
+      <td>List of navigation items for the top bar.</td>
+    </tr>
+    <tr>
+      <td><code>sidebar</code></td>
+      <td><code>array&lt;NavItem&gt;</code></td>
+      <td><code>[]</code></td>
+      <td>List of navigation items for the sidebar.</td>
+    </tr>
+    <tr>
+      <td><code>extra</code></td>
+      <td><code>object</code></td>
+      <td><code>{}</code></td>
+      <td>Arbitrary extra site-wide metadata.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>NavItem Structure</h4>
+
+<p>
+  Each <code>NavItem</code> has the following fields:
+</p>
+
+<pre><code>{
+  "label": "Home",
+  "url": "/",
+  "children": []
+}</code></pre>
+
+<ul>
+  <li><code>label</code> – Display text for the link.</li>
+  <li><code>url</code> – URL the link points to (relative or absolute).</li>
+  <li><code>children</code> – Optional nested sub-items for hierarchical menus.</li>
+</ul>
+
+<h3><code>build</code></h3>
+
+<p>
+  Specifies the directory locations used during the build.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>content_dir</code></td>
+      <td><code>string</code></td>
+      <td><code>"content"</code></td>
+      <td>Directory containing source content files.</td>
+    </tr>
+    <tr>
+      <td><code>output_dir</code></td>
+      <td><code>string</code></td>
+      <td><code>"dist"</code></td>
+      <td>Directory where generated site output will be written.</td>
+    </tr>
+    <tr>
+      <td><code>templates_dir</code></td>
+      <td><code>string</code></td>
+      <td><code>"templates"</code></td>
+      <td>Directory containing template files.</td>
+    </tr>
+    <tr>
+      <td><code>static_dir</code></td>
+      <td><code>string</code></td>
+      <td><code>"static"</code></td>
+      <td>Directory containing static assets (copied as-is).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3><code>content_rules</code></h3>
+
+<p>
+  A list of rules that map file patterns to templates. Each rule has the
+  following fields:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>name</code></td>
+      <td><code>string</code></td>
+      <td><em>required</em></td>
+      <td>A unique identifier for the rule (e.g., <code>"blog"</code>, <code>"page"</code>).</td>
+    </tr>
+    <tr>
+      <td><code>pattern</code></td>
+      <td><code>string</code></td>
+      <td><em>required</em></td>
+      <td>Glob pattern matching content files (e.g., <code>"**/*.md"</code>). Must not contain <code>..</code>.</td>
+    </tr>
+    <tr>
+      <td><code>template</code></td>
+      <td><code>string</code></td>
+      <td><em>required</em></td>
+      <td>Name of the template to use for rendering each matched file.</td>
+    </tr>
+    <tr>
+      <td><code>list_template</code></td>
+      <td><code>string | null</code></td>
+      <td><code>null</code></td>
+      <td>Optional template name for rendering list pages (index pages).</td>
+    </tr>
+    <tr>
+      <td><code>list_enabled</code></td>
+      <td><code>boolean</code></td>
+      <td><code>false</code></td>
+      <td>Whether list generation is enabled for this rule.</td>
+    </tr>
+    <tr>
+      <td><code>extra</code></td>
+      <td><code>object</code></td>
+      <td><code>{}</code></td>
+      <td>Arbitrary extra data associated with the rule.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>Example with List Generation</h4>
+
+<pre><code>content_rules:
+  - name: "blog"
+    pattern: "blog/**/*.md"
+    template: "post.tera"
+    list_template: "blog_list.tera"
+    list_enabled: true
+</code></pre>
+
+<h3><code>extra</code></h3>
+
+<p>
+  A free-form object for storing custom top-level data. This data can be
+  accessed from templates via the context.
+</p>
+
+<h2>Validation Rules</h2>
+
+<p>
+  The configuration is validated when the pipeline is built. The following
+  checks are performed:
+</p>
+
+<ul>
+  <li><code>site.site_name</code> must not be empty or contain only whitespace.</li>
+  <li>At least one content rule must be defined.</li>
+  <li>Content rule names must be unique.</li>
+  <li>Each content rule must have non-empty <code>name</code>, <code>pattern</code>, and <code>template</code>.</li>
+  <li>The <code>pattern</code> must not contain <code>".."</code> (to prevent path traversal).</li>
+  <li>If <code>site.base_url</code> is set, it must begin with <code>http://</code> or <code>https://</code>.</li>
+</ul>
+
+<p>
+  If any validation fails, an error of type
+  <code>Error::Validation</code> is returned with a descriptive message.
+</p>
+
+<h2>Loading Configuration</h2>
+
+<h3>From YAML</h3>
+
+<pre><code class="lang-rust">use librawssg_compiler::PipelineBuilder;
+
+let pipeline = PipelineBuilder::new()
+    .load_config("config.yaml")?
+    // ... other builder methods
+    .build()?;
+</code></pre>
+
+<h3>From JSON</h3>
+
+<pre><code class="lang-rust">use librawssg_config::Config;
+
+let json_str = r#"{
+    "site": {
+        "site_name": "My Site"
+    },
+    "build": {},
+    "content_rules": [
+        {
+            "name": "page",
+            "pattern": "**/*.html",
+            "template": "base.tera"
+        }
+    ]
+}"#;
+
+let config = Config::from_json_str(json_str)?;</code></pre>
+
+<h3>Programmatic Construction</h3>
+
+<pre><code class="lang-rust">use librawssg_config::{Config, ContentRule};
+
+let mut config = Config::new()
+    .with_site_name("My Site");
+
+config.add_content_rule(
+    ContentRule::new("page", "**/*.raw", "base.tera")
+);</code></pre>
+
+<h2>Serialization</h2>
+
+<p>
+  The <code>Config</code> struct supports serialization to YAML and JSON:
+</p>
+
+<pre><code class="lang-rust">let yaml = config.to_yaml_string()?;
+let json = config.to_json_string()?;</code></pre>
+
+<p>
+  This allows saving the configuration back to a file for later use.
+</p>
+
+<h2>Common Patterns</h2>
+
+<h3>Multiple Content Types</h3>
+
+<pre><code>content_rules:
+  - name: "page"
+    pattern: "**/*.raw"
+    template: "base.tera"
+  - name: "blog"
+    pattern: "blog/**/*.md"
+    template: "post.tera"
+    list_enabled: true
+    list_template: "blog_list.tera"
+</code></pre>
+
+<h3>Custom Navigation</h3>
+
+<pre><code>site:
+  navbar:
+    - label: "Home"
+      url: "/"
+    - label: "API"
+      url: "/api/index.html"
+      children:
+        - label: "Compiler"
+          url: "/api/compiler.html"
+        - label: "Config"
+          url: "/api/config.html"
+  sidebar:
+    - label: "Getting Started"
+      url: "/"
+    - label: "Installation"
+      url: "/installation.html"
+</code></pre>
+
+<h3>Custom Extra Data</h3>
+
+<pre><code>site:
+  extra:
+    analytics_id: "UA-123456-7"
+    social:
+      twitter: "handle"
+</code></pre>
+
+<p>
+  This extra data is accessible in templates via <code>{{ site.extra }}</code>.
+</p>
+
+<h2>Tips</h2>
+
+<ul>
+  <li>
+    Use YAML for better readability; JSON is also fully supported.
+  </li>
+  <li>
+    Keep <code>content_rules</code> ordered from most specific to least
+    specific, as later rules take precedence.
+  </li>
+  <li>
+    The <code>build</code> section can be omitted entirely; defaults will be
+    used.
+  </li>
+  <li>
+    Remember to set <code>list_enabled: true</code> and provide a
+    <code>list_template</code> if you want index pages for a content type.
+  </li>
+</ul>
+
+            </article>
+        </main>
+    </div>
+
+    <footer class="footer">
+    <div class="footer-inner">
+        <p>&copy; 2026 librawssg Docs.
+           Licensed under MIT.</p>
+    </div>
+</footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        hljs.highlightAll();
+    });
+</script>
+<script type="module" src="/static/js/main.js"></script>
+
+</body>
+</html>

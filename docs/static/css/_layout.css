@@ -1,0 +1,24 @@
+/* ==========================================================================
+   _layout.css
+   ========================================================================== */
+
+.wrapper {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - var(--navbar-height));
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin-right: auto;
+  margin-left: auto;
+  padding: 0 1rem;
+}
+
+.content {
+  flex: 1;
+  padding: 1.5rem 2.5rem;
+  max-width: var(--content-max-width);
+  min-width: 0;
+}

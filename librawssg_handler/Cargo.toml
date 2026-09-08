@@ -1,0 +1,20 @@
+[package]
+name = "librawssg_handler"
+version = "1.0.0"
+edition = "2024"
+description = "Content processing contracts for the librawssg static site generator"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "static-site-generator", "content", "processor", "traits"]
+categories = ["development-tools::build-utils"]
+
+[dependencies]
+librawssg_error = { version = "1.0.0", path = "../librawssg_error" }
+librawssg_fs = { version = "1.0.0", path = "../librawssg_fs" }
+chrono = { version = "0.4", default-features = false, features = ["serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+
+[lints]
+workspace = true
