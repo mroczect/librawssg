@@ -3,24 +3,38 @@
   flex-shrink: 0;
   background-color: var(--color-sidebar-bg);
   border-right: 1px solid var(--color-border);
-  padding: 1.5rem 1rem;
+  padding: 1rem 0.5rem;
   overflow-y: auto;
   position: sticky;
   top: var(--navbar-height);
   height: calc(100vh - var(--navbar-height));
+  transition: transform 0.3s ease;
 }
 
-.sidebar h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border);
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0 0.5rem;
 }
 
-.sidebar h2 a {
-  color: var(--color-text);
+.sidebar-header h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.sidebar-header h2 a {
+  color: inherit;
   text-decoration: none;
+}
+
+.sidebar-header h2 a:hover {
+  color: var(--color-primary);
 }
 
 .sidebar ul {
@@ -30,42 +44,75 @@
 }
 
 .sidebar li {
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.05rem;
 }
 
 .sidebar a {
   display: block;
-  padding: 0.3rem 0.5rem;
-  color: var(--color-text-secondary);
+  padding: 0.35rem 0.6rem;
+  color: var(--color-text);
   text-decoration: none;
   font-size: 0.9rem;
-  border-radius: 4px;
+  line-height: 1.4;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   transition:
-    background-color 0.2s,
-    color 0.2s;
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .sidebar a:hover {
-  text-decoration: none;
   background-color: var(--color-accent);
-  color: var(--color-text);
+  text-decoration: none;
+  color: var(--color-primary);
 }
 
 .sidebar a.active {
   font-weight: 600;
-  color: var(--color-text);
-  background-color: var(--color-accent);
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  background-color: rgba(13, 110, 253, 0.08);
 }
 
+/* Nested list lebih rapi */
 .sidebar li > ul {
-  margin-left: 0.75rem;
-  border-left: 1px solid var(--color-border);
-  padding-left: 0.5rem;
+  margin-left: 0.5rem;
+  border-left: 1px solid var(--color-border-light);
+  padding-left: 0.25rem;
+}
+
+.sidebar li > ul > li > a {
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
 }
 
 .sidebar-close {
   display: none;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-close:hover {
+  background-color: var(--color-accent);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  z-index: 998;
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+
+.sidebar-overlay.active {
+  display: block;
+  opacity: 1;
 }
