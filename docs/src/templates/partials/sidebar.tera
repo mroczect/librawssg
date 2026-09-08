@@ -1,7 +1,11 @@
 {% import "macros.tera" as nav %}
 <aside class="sidebar">
+    <div class="sidebar-header">
+        <h2><a href="/">Contents</a></h2>
+        <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">&times;</button>
+    </div>
     <nav class="sidebar-nav">
-        <h2>Documentation</h2>
         {{ nav::render_nav(items=site.sidebar, active_url=page_url | default(value='')) }}
     </nav>
 </aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>

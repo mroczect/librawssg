@@ -2,7 +2,7 @@
 <header class="navbar">
     <div class="navbar-inner">
         <a href="/" class="brand">{{ site.site_name }}</a>
-        <button class="navbar-toggle" aria-label="Toggle navigation" id="navbar-toggle">
+        <button class="navbar-toggle" aria-label="Toggle navigation" id="navbar-toggle" aria-expanded="false">
             <span class="bar"></span>
             <span class="bar"></span>
             <span class="bar"></span>
@@ -10,5 +10,8 @@
         <nav class="nav-links" id="nav-links">
             {{ nav::render_nav(items=site.navbar, active_url=page_url | default(value='')) }}
         </nav>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+            <span class="theme-icon">🌙</span>
+        </button>
     </div>
 </header>

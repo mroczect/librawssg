@@ -1,1 +1,7 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        hljs.highlightAll();
+    });
+</script>
 <script type="module" src="/static/js/main.js"></script>

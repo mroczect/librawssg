@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["librawssg","librawssg_compiler", "librawssg_config", "librawssg_demo", "librawssg_error", "librawssg_fs","librawssg_handler", "librawssg_templates"]
+members = ["librawssg","librawssg_compiler", "librawssg_config", "librawssg_demo", "librawssg_error", "librawssg_fs","librawssg_handler", "librawssg_templates", "docs"]
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }
