@@ -1,0 +1,31 @@
+{% macro render_nav(items, active_url='') %}
+    <ul>
+        {% for item in items %}
+            <li>
+                <a href="{{ item.url }}"
+                   {% if active_url and active_url == item.url %}class="active"{% endif %}>
+                    {{ item.label }}
+                </a>
+                {% if item.children %}
+                    {{ self::render_nav(items=item.children, active_url=active_url) }}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endmacro %}
+
+{% macro render_breadcrumb(items) %}
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+            {% for item in items %}
+                <li>
+                    {% if not loop.last %}
+                        <a href="{{ item.url }}">{{ item.label }}</a>
+                    {% else %}
+                        <span aria-current="page">{{ item.label }}</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    </nav>
+{% endmacro %}

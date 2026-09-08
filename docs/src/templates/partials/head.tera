@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="{{ site.language | default(value='en') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page_title %}{{ page_title }} | {% endif %}{{ site.site_name }}</title>
+    <meta name="description" content="{{ page_description | default(value=site.description | default(value='')) }}">
+
+    {# Set tema awal sebelum CSS dimuat untuk mencegah flash #}
+    <script>
+        (function() {
+            const stored = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+
+    {% include "partials/stylesheets.tera" %}
+</head>

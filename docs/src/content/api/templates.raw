@@ -1,0 +1,947 @@
+<h1>librawssg_templates</h1>
+
+<p>
+    <strong>Version</strong>: 1.0.0 (implied)<br />
+    <strong>Crate name</strong>: <code>librawssg_templates</code><br />
+    <strong>Description</strong>: Defines rendering abstractions for static site
+    generators. Provides the <code>Renderer</code> and
+    <code>RenderContext</code> traits, and an optional
+    <code>TeraRenderer</code> implementation (when the <code>tera</code> feature
+    is enabled) that integrates the Tera template engine.
+</p>
+
+<hr />
+
+<h2>Table of Contents</h2>
+<ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#modules-and-features">Modules and Features</a></li>
+    <li>
+        <a href="#core-traits">Core Traits</a>
+        <ul>
+            <li>
+                <a href="#trait-rendercontext"><code>RenderContext</code></a>
+                <ul>
+                    <li>
+                        <a href="#rendercontext-required-methods"
+                            >Required Methods</a
+                        >
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <a href="#trait-renderer"><code>Renderer</code></a>
+                <ul>
+                    <li>
+                        <a href="#renderer-required-method">Required Method</a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li>
+        <a href="#struct-terarenderer"><code>TeraRenderer</code></a>
+        <ul>
+            <li><a href="#struct-definition">Struct Definition</a></li>
+            <li>
+                <a href="#terarenderer-new">Constructor <code>new()</code></a>
+            </li>
+            <li>
+                <a href="#terarenderer-add_raw_template"
+                    >Method <code>add_raw_template()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-add_template_file"
+                    >Method <code>add_template_file()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-add_template_files_from_dir"
+                    >Method <code>add_template_files_from_dir()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-load_templates_dir"
+                    >Method <code>load_templates_dir()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-enable_autoescape"
+                    >Method <code>enable_autoescape()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-render_str"
+                    >Method <code>render_str()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-as_tera"
+                    >Method <code>as_tera()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-as_tera_mut"
+                    >Method <code>as_tera_mut()</code></a
+                >
+            </li>
+            <li>
+                <a href="#terarenderer-trait-implementations"
+                    >Trait Implementations</a
+                >
+                <ul>
+                    <li>
+                        <a href="#terarenderer-default"><code>Default</code></a>
+                    </li>
+                    <li>
+                        <a href="#terarenderer-renderer-impl"
+                            ><code>Renderer</code> for
+                            <code>TeraRenderer</code></a
+                        >
+                    </li>
+                    <li>
+                        <a href="#rendercontext-for-teracontext"
+                            ><code>RenderContext</code> for
+                            <code>tera::Context</code></a
+                        >
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li><a href="#internal-helper-function">Internal Helper Function</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#feature-gating">Feature Gating</a></li>
+    <li>
+        <a href="#examples-from-tests">Examples from Tests</a>
+        <ul>
+            <li><a href="#basic-rendering">Basic Rendering</a></li>
+            <li>
+                <a href="#loops-filters-conditions"
+                    >Loops, Filters, Conditions</a
+                >
+            </li>
+            <li><a href="#file-loading">File Loading</a></li>
+            <li><a href="#autoescaping">Autoescaping</a></li>
+            <li>
+                <a href="#template-inheritance-and-macros"
+                    >Template Inheritance and Macros</a
+                >
+            </li>
+            <li><a href="#context-downcasting">Context Downcasting</a></li>
+        </ul>
+    </li>
+    <li><a href="#testing-suite-overview">Testing Suite Overview</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+</ol>
+
+<hr />
+
+<h2 id="overview">Overview</h2>
+<p>
+    <code>librawssg_templates</code> provides a pluggable template rendering
+    system. It abstracts the rendering process with two traits:
+</p>
+<ul>
+    <li>
+        <strong><code>Renderer</code></strong> – Defines the
+        <code>render</code> method that takes a template name and a context,
+        returning a rendered string.
+    </li>
+    <li>
+        <strong><code>RenderContext</code></strong> – An object‑safe trait that
+        allows type erasure for context objects; specifically, it provides
+        <code>as_any</code> and <code>as_mut_any</code> to downcast to concrete
+        context types.
+    </li>
+</ul>
+<p>
+    The crate optionally includes a
+    <strong><code>TeraRenderer</code></strong> implementation for the
+    <a href="https://tera.netlify.app/">Tera</a> template engine. This
+    implementation is gated behind the <code>tera</code> feature flag.
+</p>
+
+<hr />
+
+<h2 id="modules-and-features">Modules and Features</h2>
+<p>The crate root (<code>lib.rs</code>) declares:</p>
+<pre><code>pub mod renderer;
+#[cfg(feature = "tera")]
+pub mod tera_renderer;
+
+pub use renderer::{RenderContext, Renderer};
+#[cfg(feature = "tera")]
+pub use tera_renderer::TeraRenderer;
+</code></pre>
+<ul>
+    <li>
+        <strong><code>renderer</code></strong> – Always available; contains the
+        two core traits.
+    </li>
+    <li>
+        <strong><code>tera_renderer</code></strong> – Only compiled when the
+        <code>tera</code> feature is enabled; contains
+        <code>TeraRenderer</code>.
+    </li>
+    <li>
+        Re‑exports at the crate root make the traits and
+        <code>TeraRenderer</code> easy to import.
+    </li>
+</ul>
+<p>
+    The <code>tera</code> feature must be explicitly enabled in
+    <code>Cargo.toml</code> to use <code>TeraRenderer</code>. Without it, the
+    crate still provides the traits for custom renderer implementations.
+</p>
+
+<hr />
+
+<h2 id="core-traits">Core Traits</h2>
+<h3 id="trait-rendercontext">Trait <code>RenderContext</code></h3>
+<pre><code>pub trait RenderContext: Send + Sync {
+    fn as_any(&amp;self) -&gt; &amp;dyn Any;
+    fn as_mut_any(&amp;mut self) -&gt; &amp;mut dyn Any;
+}
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Allows arbitrary context types to be passed to a
+    <code>Renderer</code> as a trait object. The renderer can then downcast the
+    <code>&amp;dyn RenderContext</code> to the concrete context type it expects
+    (e.g., <code>tera::Context</code>). This provides flexibility without
+    requiring all renderers to accept a single concrete type.
+</p>
+<p><strong>Requirements</strong>:</p>
+<ul>
+    <li>Implementors must be <code>Send + Sync</code> (thread‑safe).</li>
+    <li>
+        Must provide <code>as_any</code> and <code>as_mut_any</code> to expose
+        the underlying <code>Any</code> reference.
+    </li>
+</ul>
+<p><strong>Typical Implementation</strong>:</p>
+<p>For any type <code>T</code>, you can implement:</p>
+<pre><code>impl RenderContext for T {
+    fn as_any(&amp;self) -&gt; &amp;dyn Any {
+        self
+    }
+    fn as_mut_any(&amp;mut self) -&gt; &amp;mut dyn Any {
+        self
+    }
+}
+</code></pre>
+<p><strong>Example</strong> (from tests):</p>
+<pre><code>struct MockContext;
+
+impl RenderContext for MockContext {
+    fn as_any(&amp;self) -&gt; &amp;dyn Any {
+        self
+    }
+    fn as_mut_any(&amp;mut self) -&gt; &amp;mut dyn Any {
+        self
+    }
+}
+</code></pre>
+
+<hr />
+
+<h3 id="trait-renderer">Trait <code>Renderer</code></h3>
+<pre><code>pub trait Renderer: Send + Sync {
+    fn render(&amp;self, template_name: &amp;str, context: &amp;dyn RenderContext) -&gt; Result&lt;String&gt;;
+}
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Defines the rendering interface. A
+    <code>Renderer</code> takes a template identifier (name) and a context
+    object, and returns the rendered output as a <code>String</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li>
+        <code>template_name</code>: A string identifying the template (e.g.,
+        <code>"index.html"</code>, <code>"blog/post.tera"</code>).
+    </li>
+    <li>
+        <code>context</code>: A reference to an object implementing
+        <code>RenderContext</code>. The renderer is expected to downcast this to
+        the appropriate concrete context type.
+    </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li><code>Ok(String)</code> containing the rendered output.</li>
+    <li>
+        <code>Err(librawssg_error::Error)</code> if rendering fails (e.g.,
+        template not found, invalid syntax, missing variable, or context type
+        mismatch).
+    </li>
+</ul>
+<p><strong>Note</strong>: Implementors must be <code>Send + Sync</code>.</p>
+<p><strong>Example</strong> (custom mock renderer):</p>
+<pre><code>struct MockRenderer { output: String }
+
+impl Renderer for MockRenderer {
+    fn render(&amp;self, _template_name: &amp;str, _context: &amp;dyn RenderContext) -&gt; Result&lt;String&gt; {
+        Ok(self.output.clone())
+    }
+}
+</code></pre>
+
+<hr />
+
+<h2 id="struct-terarenderer">Struct <code>TeraRenderer</code></h2>
+<p>
+    <code>TeraRenderer</code> is a wrapper around <code>tera::Tera</code>,
+    providing convenient methods to load templates and render them using the
+    <code>Renderer</code> trait. It is only available when the
+    <code>tera</code> feature is enabled.
+</p>
+
+<h3 id="struct-definition">Struct Definition</h3>
+<pre><code>#[derive(Debug)]
+pub struct TeraRenderer {
+    tera: tera::Tera,
+}
+</code></pre>
+<p>
+    The <code>tera</code> field is private; access is provided via
+    <code>as_tera</code> and <code>as_tera_mut</code>.
+</p>
+
+<hr />
+
+<h3 id="terarenderer-new"><code>TeraRenderer::new</code></h3>
+<pre><code>#[must_use]
+pub fn new() -&gt; Self
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Creates a new <code>TeraRenderer</code> with an
+    empty Tera instance (<code>tera::Tera::default()</code>).
+</p>
+<p><strong>Returns</strong>: A new <code>TeraRenderer</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code>let renderer = TeraRenderer::new();
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-add_raw_template">
+    <code>TeraRenderer::add_raw_template</code>
+</h3>
+<pre><code>pub fn add_raw_template(&amp;mut self, name: &amp;str, content: &amp;str) -&gt; Result&lt;()&gt;
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Adds a template from a string, associating it with
+    the given <code>name</code>. The template is parsed and stored internally.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li>
+        <code>name</code>: The template name (e.g., <code>"index.html"</code>,
+        <code>"partial"</code>).
+    </li>
+    <li>
+        <code>content</code>: The raw template source (e.g.,
+        <code>"Hello {{ name }}"</code>).
+    </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li><code>Ok(())</code> if the template was added successfully.</li>
+    <li>
+        <code>Err(Error::Render)</code> if the template syntax is invalid (the
+        underlying <code>tera::Error</code> is converted to a string and
+        wrapped).
+    </li>
+</ul>
+<p>
+    <strong>Behavior</strong>: Calls
+    <code>tera.add_raw_template(name, content)</code>. Template names must be
+    unique; adding a duplicate name will replace the existing template.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code>renderer.add_raw_template("hello", "Hello {{ name }}")?;
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-add_template_file">
+    <code>TeraRenderer::add_template_file</code>
+</h3>
+<pre><code>pub fn add_template_file(&amp;mut self, path: &amp;Path) -&gt; Result&lt;()&gt;
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Reads a template file from disk and adds it to the
+    renderer. The template name is derived from the file name (including
+    extension).
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li><code>path</code>: Path to the template file.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li><code>Ok(())</code> on success.</li>
+    <li>
+        <code>Err(Error::Io)</code> if the file cannot be read (wrapped as
+        <code>Error::Io</code> with a message containing the original I/O
+        error).
+    </li>
+    <li>
+        <code>Err(Error::Render)</code> if the file name is not valid UTF‑8 or
+        missing (unlikely).
+    </li>
+</ul>
+<p><strong>Behavior</strong>:</p>
+<ol>
+    <li>
+        Reads the file content using <code>std::fs::read_to_string</code>. On
+        failure, maps to
+        <code>Error::Io(std::io::Error::other(format!("{e}")))</code>.
+    </li>
+    <li>
+        Extracts the file name (the last component of the path) and converts it
+        to a <code>&amp;str</code>. If missing or non‑UTF‑8, returns
+        <code>Error::Render("template file has no valid file name")</code>.
+    </li>
+    <li>
+        Calls <code>add_raw_template</code> with that file name as the template
+        name.
+    </li>
+</ol>
+<p><strong>Example</strong>:</p>
+<pre><code>renderer.add_template_file(Path::new("templates/index.html"))?;
+// Template is registered as "index.html"
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-add_template_files_from_dir">
+    <code>TeraRenderer::add_template_files_from_dir</code>
+</h3>
+<pre><code>pub fn add_template_files_from_dir(&amp;mut self, dir: &amp;Path) -&gt; Result&lt;()&gt;
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Adds all files directly inside a directory as
+    templates. This method is <strong>not recursive</strong>; it only considers
+    files in the immediate directory.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li><code>dir</code>: Directory containing template files.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li>
+        <code>Ok(())</code> if at least the directory is readable and processing
+        completes.
+    </li>
+    <li><code>Err(Error::Io)</code> on directory read failure.</li>
+    <li>
+        <code>Err(Error::Render)</code> if any individual file cannot be added.
+    </li>
+</ul>
+<p><strong>Behavior</strong>:</p>
+<ol>
+    <li>Reads the directory entries using <code>std::fs::read_dir</code>.</li>
+    <li>
+        For each entry:
+        <ul>
+            <li>
+                If the entry is a file, calls
+                <code>add_template_file</code> with its path.
+            </li>
+            <li>
+                If that returns an error, the method immediately returns the
+                error (fail‑fast).
+            </li>
+        </ul>
+    </li>
+    <li>Non‑file entries (subdirectories, symlinks) are ignored.</li>
+</ol>
+<p>
+    <strong>Note</strong>: Template names are the file names (including
+    extensions).
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code>renderer.add_template_files_from_dir(Path::new("templates/"))?;
+// Adds all files in templates/ as templates with names like "base.tera", "index.html", etc.
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-load_templates_dir">
+    <code>TeraRenderer::load_templates_dir</code>
+</h3>
+<pre><code>pub fn load_templates_dir(&amp;mut self, dir: &amp;Path) -&gt; Result&lt;()&gt;
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Recursively loads all template files from a
+    directory tree. Template names are derived from the relative path (using
+    forward slashes as separators), allowing nested template structures (e.g.,
+    <code>"sub/nested.tera"</code>).
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li><code>dir</code>: Root directory to traverse.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li><code>Ok(())</code> on success.</li>
+    <li>
+        <code>Err(Error::Io)</code> for filesystem errors during traversal or
+        reading.
+    </li>
+    <li>
+        <code>Err(Error::Render)</code> for invalid UTF‑8 paths or component
+        issues.
+    </li>
+</ul>
+<p><strong>Behavior</strong>:</p>
+<ol>
+    <li>
+        Canonicalizes the input directory (using
+        <code>dir.canonicalize()</code>) to ensure a stable base.
+    </li>
+    <li>
+        Walks the directory recursively using <code>walkdir::WalkDir</code>.
+        Only files are processed.
+    </li>
+    <li>
+        For each file:
+        <ul>
+            <li>
+                Computes its path relative to the canonical directory using
+                <code>strip_prefix</code>.
+            </li>
+            <li>
+                Converts the relative path to a template name using the internal
+                helper <code>rel_path_to_template_name</code> (which joins
+                components with <code>/</code> and rejects non‑normal
+                components).
+            </li>
+            <li>Reads the file content.</li>
+            <li>
+                Calls <code>add_raw_template</code> with the computed template
+                name and content.
+            </li>
+        </ul>
+    </li>
+</ol>
+<p>
+    <strong>Note</strong>: This method is similar to
+    <code>add_template_files_from_dir</code> but recursive and with
+    namespace‑like template names.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code>renderer.load_templates_dir(Path::new("templates"))?;
+// If templates contains sub/child.tera, it can be referenced as "sub/child.tera"
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-enable_autoescape">
+    <code>TeraRenderer::enable_autoescape</code>
+</h3>
+<pre><code>pub fn enable_autoescape(&amp;mut self)
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Turns on automatic escaping for HTML, HTM, and XML
+    file extensions. This is a convenience method that calls
+    <code>tera.autoescape_on(vec!["html", "htm", "xml"])</code>.
+</p>
+<p><strong>Parameters</strong>: None.</p>
+<p><strong>Returns</strong>: Nothing.</p>
+<p>
+    <strong>Behavior</strong>: After calling this, templates with names ending
+    in <code>.html</code>, <code>.htm</code>, or <code>.xml</code> will
+    automatically escape variable output (HTML escaping). For other file
+    extensions, autoescaping remains off.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code>renderer.enable_autoescape();
+renderer.add_raw_template("page.html", "{{ user_input }}")?;
+// Rendering will escape HTML special characters in user_input
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-render_str"><code>TeraRenderer::render_str</code></h3>
+<pre><code>pub fn render_str(&amp;self, template_str: &amp;str, context: &amp;dyn RenderContext) -&gt; Result&lt;String&gt;
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Renders a one‑off template string without
+    registering it. This is useful for small, inline templates.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li><code>template_str</code>: The template source as a string.</li>
+    <li>
+        <code>context</code>: A <code>&amp;dyn RenderContext</code> that must
+        downcast to <code>tera::Context</code>.
+    </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li><code>Ok(String)</code> with rendered output.</li>
+    <li>
+        <code>Err(Error::Render)</code> if the context is not a
+        <code>tera::Context</code> or if rendering fails.
+    </li>
+</ul>
+<p><strong>Behavior</strong>:</p>
+<ol>
+    <li>
+        Attempts to downcast <code>context.as_any()</code> to
+        <code>&amp;tera::Context</code>. If the cast fails, returns
+        <code>Error::Render("invalid context type for Tera")</code>.
+    </li>
+    <li>
+        Calls <code>tera::Tera::one_off(template_str, tera_ctx, true)</code>.
+        The third argument <code>true</code> enables autoescaping for the
+        one‑off render <strong>by default</strong>, regardless of the renderer's
+        autoescape settings.
+    </li>
+</ol>
+<p>
+    <strong>Note</strong>: <code>render_str</code> always autoescapes (the
+    <code>true</code> parameter forces autoescape). This may differ from
+    <code>render</code> which respects the renderer's autoescape configuration.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code>let renderer = TeraRenderer::new();
+let mut ctx = tera::Context::new();
+ctx.insert("content", "&lt;b&gt;bold&lt;/b&gt;");
+let output = renderer.render_str("{{ content }}", &amp;ctx)?;
+// Output is escaped: "&amp;lt;b&amp;gt;bold&amp;lt;&amp;#x2F;b&amp;gt;"
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-as_tera"><code>TeraRenderer::as_tera</code></h3>
+<pre><code>#[must_use]
+pub const fn as_tera(&amp;self) -&gt; &amp;tera::Tera
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Returns an immutable reference to the underlying
+    <code>tera::Tera</code> instance. This allows advanced operations not
+    directly exposed by <code>TeraRenderer</code>.
+</p>
+<p><strong>Returns</strong>: <code>&amp;tera::Tera</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code>let tera = renderer.as_tera();
+// e.g., inspect registered templates
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-as_tera_mut"><code>TeraRenderer::as_tera_mut</code></h3>
+<pre><code>#[must_use]
+pub const fn as_tera_mut(&amp;mut self) -&gt; &amp;mut tera::Tera
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Returns a mutable reference to the underlying
+    <code>tera::Tera</code> instance. Useful for direct manipulation, such as
+    adding templates or changing settings.
+</p>
+<p><strong>Returns</strong>: <code>&amp;mut tera::Tera</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code>let tera_mut = renderer.as_tera_mut();
+tera_mut.add_raw_template("direct", "Hello")?;
+</code></pre>
+
+<hr />
+
+<h3 id="terarenderer-trait-implementations">Trait Implementations</h3>
+
+<h4 id="terarenderer-default"><code>TeraRenderer::Default</code></h4>
+<pre><code>impl Default for TeraRenderer {
+    fn default() -&gt; Self {
+        Self::new()
+    }
+}
+</code></pre>
+<p>
+    Allows creating a <code>TeraRenderer</code> with
+    <code>TeraRenderer::default()</code>, equivalent to <code>new()</code>.
+</p>
+
+<h4 id="terarenderer-renderer-impl">
+    <code>Renderer</code> for <code>TeraRenderer</code>
+</h4>
+<pre><code>impl Renderer for TeraRenderer {
+    fn render(&amp;self, template_name: &amp;str, context: &amp;dyn RenderContext) -&gt; Result&lt;String&gt; {
+        let tera_ctx = context
+            .as_any()
+            .downcast_ref::&lt;tera::Context&gt;()
+            .ok_or_else(|| Error::Render("invalid context type for Tera".into()))?;
+        self.tera
+            .render(template_name, tera_ctx)
+            .map_err(|e| Error::Render(e.to_string()))
+    }
+}
+</code></pre>
+<ul>
+    <li>
+        <strong><code>render</code> method</strong>:
+        <ul>
+            <li>Downcasts the context to <code>tera::Context</code>.</li>
+            <li>
+                Delegates to <code>tera.render(template_name, tera_ctx)</code>.
+            </li>
+            <li>Maps any error to <code>Error::Render</code>.</li>
+        </ul>
+    </li>
+</ul>
+
+<h4 id="rendercontext-for-teracontext">
+    <code>RenderContext</code> for <code>tera::Context</code>
+</h4>
+<pre><code>impl RenderContext for tera::Context {
+    fn as_any(&amp;self) -&gt; &amp;dyn core::any::Any {
+        self
+    }
+    fn as_mut_any(&amp;mut self) -&gt; &amp;mut dyn core::any::Any {
+        self
+    }
+}
+</code></pre>
+<p>
+    This implementation allows <code>tera::Context</code> to be used directly as
+    a <code>RenderContext</code> when calling <code>render</code>. Users
+    typically create a <code>tera::Context</code>, populate it, and pass
+    <code>&amp;ctx</code> to <code>render</code>.
+</p>
+
+<hr />
+
+<h2 id="internal-helper-function">Internal Helper Function</h2>
+<p><code>rel_path_to_template_name</code> (private)</p>
+<pre><code>fn rel_path_to_template_name(rel_path: &amp;Path) -&gt; Result&lt;String&gt;
+</code></pre>
+<p>
+    <strong>Purpose</strong>: Converts a relative path (from
+    <code>strip_prefix</code>) into a template name string using forward slashes
+    as separators. It rejects paths with unusual components (prefixes, root,
+    parent, or current directory).
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+    <li>
+        <code>rel_path</code>: A relative path (assumed to have been stripped of
+        a base).
+    </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+    <li>
+        <code>Ok(String)</code> with the template name (e.g.,
+        <code>"sub/nested.tera"</code>).
+    </li>
+    <li>
+        <code>Err(Error::Render)</code> if:
+        <ul>
+            <li>
+                A component is not <code>Normal</code> (e.g., contains
+                <code>..</code> or <code>/</code> absolute parts).
+            </li>
+            <li>The path contains non‑UTF‑8 characters.</li>
+            <li>The resulting name is empty.</li>
+        </ul>
+    </li>
+</ul>
+<p>
+    <strong>Note</strong>: This function is not public but is essential for
+    <code>load_templates_dir</code>.
+</p>
+
+<hr />
+
+<h2 id="error-handling">Error Handling</h2>
+<p>
+    All fallible methods in <code>TeraRenderer</code> return
+    <code>librawssg_error::Result&lt;T&gt;</code>. The errors originate from:
+</p>
+<ul>
+    <li>
+        Filesystem operations → converted to <code>Error::Io</code> (with
+        <code>std::io::Error::other</code> wrapper to preserve the original
+        message).
+    </li>
+    <li>
+        Tera template parsing/rendering → converted to
+        <code>Error::Render</code> with the error message as string.
+    </li>
+    <li>
+        Context type mismatch →
+        <code>Error::Render("invalid context type for Tera")</code>.
+    </li>
+    <li>
+        Invalid template file name or path component →
+        <code>Error::Render</code>.
+    </li>
+</ul>
+<p>
+    The <code>Renderer</code> trait method also returns
+    <code>Result&lt;String&gt;</code>, allowing custom renderers to use the same
+    error type.
+</p>
+
+<hr />
+
+<h2 id="feature-gating">Feature Gating</h2>
+<ul>
+    <li>
+        The core traits (<code>Renderer</code>, <code>RenderContext</code>) are
+        always available.
+    </li>
+    <li>
+        <code>TeraRenderer</code> and the <code>tera</code> integration are only
+        compiled when the <code>tera</code> feature is enabled.
+    </li>
+    <li>
+        Tests that use <code>TeraRenderer</code> are also gated with
+        <code>#![cfg(feature = "tera")]</code>.
+    </li>
+</ul>
+<p>To enable the feature, add to <code>Cargo.toml</code>:</p>
+<pre><code>[dependencies]
+librawssg_templates = { version = "...", features = ["tera"] }
+</code></pre>
+
+<hr />
+
+<h2 id="examples-from-tests">Examples from Tests</h2>
+<p>
+    The test suite (<code>tera_tests.rs</code> and <code>unit_tests.rs</code>)
+    provides extensive examples. Below are selected snippets with explanations.
+</p>
+
+<h3 id="basic-rendering">Basic Rendering</h3>
+<pre><code>let mut renderer = TeraRenderer::new();
+renderer.add_raw_template("simple", "{{ title }}")?;
+
+let mut ctx = tera::Context::new();
+ctx.insert("title", "Hello World");
+let output = renderer.render("simple", &amp;ctx)?;
+assert_eq!(output, "Hello World");
+</code></pre>
+
+<h3 id="loops-filters-conditions">Loops, Filters, Conditions</h3>
+<pre><code>renderer.add_raw_template("loop", "{% for item in items %}{{ item }}{% if not loop.last %},{% endif %}{% endfor %}")?;
+// context: items = ["a","b","c"] -&gt; output "a,b,c"
+
+renderer.add_raw_template("filter", "{{ title | upper }}")?;
+// context: title = "Hello" -&gt; "HELLO"
+
+renderer.add_raw_template("condition", "{% if number &gt; 40 %}high{% else %}low{% endif %}")?;
+// context: number = 42 -&gt; "high"
+</code></pre>
+
+<h3 id="file-loading">File Loading</h3>
+<pre><code>// Add a single file
+let file_path = dir.path().join("hello.tera");
+std::fs::write(&amp;file_path, "{{ name }}")?;
+renderer.add_template_file(&amp;file_path)?;
+// Template name is "hello.tera"
+
+// Add all files from a directory (non-recursive)
+renderer.add_template_files_from_dir(dir.path())?;
+
+// Recursive loading with namespaced names
+renderer.load_templates_dir(dir.path())?;
+// If sub/nested.tera exists, use renderer.render("sub/nested.tera", &amp;ctx)
+</code></pre>
+
+<h3 id="autoescaping">Autoescaping</h3>
+<pre><code>renderer.enable_autoescape();
+renderer.add_raw_template("esc.html", "{{ content }}")?;
+let mut ctx = tera::Context::new();
+ctx.insert("content", "&lt;script&gt;alert(1)&lt;/script&gt;");
+let output = renderer.render("esc.html", &amp;ctx)?;
+// Output: &amp;lt;script&amp;gt;alert(1)&amp;lt;&amp;#x2F;script&amp;gt;
+</code></pre>
+<p>Note: <code>render_str</code> always autoescapes:</p>
+<pre><code>let output = renderer.render_str("{{ content }}", &amp;ctx)?;
+// Also escaped
+</code></pre>
+
+<h3 id="template-inheritance-and-macros">Template Inheritance and Macros</h3>
+<pre><code>renderer.add_raw_template("base", "&lt;html&gt;{% block content %}Default{% endblock %}&lt;/html&gt;")?;
+renderer.add_raw_template("child", "{% extends \"base\" %}{% block content %}Child content{% endblock %}")?;
+// Rendering "child" yields "&lt;html&gt;Child content&lt;/html&gt;"
+
+renderer.add_raw_template("macro", "{% macro hello(name) %}Hello, {{ name }}{% endmacro hello %}{{ self::hello(name=\"World\") }}")?;
+// Rendering "macro" yields "Hello, World"
+</code></pre>
+
+<h3 id="context-downcasting">Context Downcasting</h3>
+<pre><code>let ctx = sample_context();
+let dyn_ctx: &amp;dyn RenderContext = &amp;ctx;
+assert!(dyn_ctx.as_any().is::&lt;tera::Context&gt;());
+</code></pre>
+<p>
+    This shows how the <code>RenderContext</code> trait enables type erasure and
+    safe downcasting.
+</p>
+
+<hr />
+
+<h2 id="testing-suite-overview">Testing Suite Overview</h2>
+<p>The crate contains two test files:</p>
+<ul>
+    <li>
+        <strong><code>unit_tests.rs</code></strong> (always compiled): Tests the
+        core traits using mock implementations, verifies re‑exports are
+        available, and ensures the traits can be used without the
+        <code>tera</code> feature.
+    </li>
+    <li>
+        <strong><code>tera_tests.rs</code></strong> (compiled only with
+        <code>tera</code> feature): Comprehensive tests for
+        <code>TeraRenderer</code> including:
+        <ul>
+            <li>Basic variable substitution, loops, filters, conditions.</li>
+            <li>
+                Error cases (missing template, missing variable, invalid
+                syntax).
+            </li>
+            <li>
+                Loading templates from files and directories (both non‑recursive
+                and recursive).
+            </li>
+            <li>Autoescaping behavior.</li>
+            <li>Template inheritance, macros, includes.</li>
+            <li>Context downcasting.</li>
+            <li>
+                Access to underlying <code>Tera</code> via
+                <code>as_tera</code> and <code>as_tera_mut</code>.
+            </li>
+        </ul>
+    </li>
+</ul>
+<p>
+    The tests use <code>tempfile</code> for temporary directories and
+    <code>walkdir</code> for directory traversal validation.
+</p>
+
+<hr />
+
+<h2 id="conclusion">Conclusion</h2>
+<p>
+    <code>librawssg_templates</code> offers a flexible and extensible template
+    rendering abstraction. The core <code>Renderer</code> and
+    <code>RenderContext</code> traits allow any template engine to be
+    integrated, while the built‑in <code>TeraRenderer</code> provides a
+    powerful, full‑featured implementation for the Tera engine. With methods for
+    loading templates from files or directories, autoescaping control, and
+    direct access to the underlying engine, it covers the needs of most static
+    site generators.
+</p>
+<p>
+    The crate is designed with testability and thread‑safety in mind, and the
+    comprehensive test suite serves as both documentation and validation. By
+    enabling the <code>tera</code> feature, developers can immediately start
+    rendering templates with minimal setup.
+</p>

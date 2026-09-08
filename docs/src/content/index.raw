@@ -1,0 +1,99 @@
+<h1>librawssg</h1>
+
+<p class="lead">
+  A modular static site generator library for Rust. Build your own static site
+  generator with composable, testable, and safe components.
+</p>
+
+<h2>What is librawssg?</h2>
+
+<p>
+  <code>librawssg</code> is a collection of Rust crates that provide the core
+  building blocks for creating a static site generator. It is not a
+  ready‑to‑use CLI tool, but a framework that gives you full control over your
+  site’s behaviour.
+</p>
+
+<ul>
+  <li>
+    <strong>Modular architecture</strong> – Each aspect (configuration,
+    filesystem, content handling, templating, compilation) is isolated in its
+    own crate.
+  </li>
+  <li>
+    <strong>Pluggable processors</strong> – Define custom content processors via
+    the <code>Processor</code> trait.
+  </li>
+  <li>
+    <strong>Template engine integration</strong> – Built‑in support for Tera
+    templates (optional).
+  </li>
+  <li>
+    <strong>Strong filesystem abstraction</strong> – Trait‑based filesystem with
+    built‑in path traversal protection.
+  </li>
+  <li>
+    <strong>Atomic output generation</strong> – The build pipeline writes to a
+    temporary directory and atomically replaces the final output.
+  </li>
+  <li>
+    <strong>Comprehensive configuration</strong> – YAML/JSON support,
+    validation, and nested site/build settings.
+  </li>
+</ul>
+
+<h2>Quick Start</h2>
+
+<p>Add the facade crate to your <code>Cargo.toml</code>:</p>
+
+<pre><code class="lang-toml">[dependencies]
+librawssg = "1.0.0"</code></pre>
+
+<p>
+  Then, in your <code>main.rs</code>, assemble a pipeline:
+</p>
+
+<pre><code class="lang-rust">use librawssg::{Config, ContentRule, PipelineBuilder, RealFs, TeraContextBuilder, TeraRenderer};
+
+fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let mut config = Config::new().with_site_name("My Site");
+    config.add_content_rule(ContentRule::new("page", "**/*.raw", "base.tera"));
+
+    let mut renderer = TeraRenderer::new();
+    renderer.load_templates_dir("templates")?;
+
+    let pipeline = PipelineBuilder::new()
+        .config(config)
+        .content_dir("content")
+        .output_dir("dist")
+        .with_fs(Box::new(RealFs))
+        .with_renderer(Box::new(renderer))
+        .with_context_builder(Box::new(TeraContextBuilder))
+        .build()?;
+
+    pipeline.run()?;
+    Ok(())
+}</code></pre>
+
+<p>
+  For a complete example, see the <a href="installation.html">Installation</a>
+  page.
+</p>
+
+<h2>Explore the Documentation</h2>
+
+<ul>
+  <li><a href="installation.html">Installation</a> – How to set up a librawssg project.</li>
+  <li><a href="configuration.html">Configuration</a> – All configuration options and validation.</li>
+  <li><a href="api/index.html">API Reference</a> – Detailed documentation for each crate.</li>
+  <li><a href="contributing.html">Contributing</a> – Guidelines for contributing to the project.</li>
+  <li><a href="code_of_conduct.html">Code of Conduct</a> – Our community standards.</li>
+  <li><a href="license.html">License</a> – MIT license details.</li>
+</ul>
+
+<h2>Repository</h2>
+
+<p>
+  The source code is available on
+  <a href="https://github.com/mroczect/librawssg">GitHub</a>.
+</p>

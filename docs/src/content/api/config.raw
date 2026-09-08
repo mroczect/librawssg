@@ -1,0 +1,1071 @@
+<h1 id="librawssg_config">librawssg_config</h1>
+<p>
+   <strong>Version</strong>: 1.0.0 (implied)<br /><strong>Crate name</strong>:
+   <code>librawssg_config</code><br /><strong>Description</strong>: Defines
+   configuration data structures for the <code>librawssg</code> static site
+   generator. Provides <code>Config</code>, <code>SiteConfig</code>,
+   <code>BuildConfig</code>, <code>ContentRule</code>, and
+   <code>NavItem</code> types, along with serialization/deserialization support
+   (YAML and JSON) and validation logic.
+</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+   <li><a href="#overview">Overview</a></li>
+   <li><a href="#modules">Modules</a></li>
+   <li>
+      <a href="#struct-buildconfig"><code>BuildConfig</code></a>
+      <ul>
+         <li><a href="#buildconfig-fields">Fields</a></li>
+         <li>
+            <a href="#buildconfig-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#buildconfig-default"
+               ><code>Default</code> Implementation</a
+            >
+         </li>
+         <li>
+            <a href="#buildconfig-serialization"
+               >Serialization &amp; Deserialization</a
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-contentrule"><code>ContentRule</code></a>
+      <ul>
+         <li><a href="#contentrule-fields">Fields</a></li>
+         <li>
+            <a href="#contentrule-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#contentrule-default"
+               ><code>Default</code> Implementation</a
+            >
+         </li>
+         <li>
+            <a href="#contentrule-serialization"
+               >Serialization &amp; Deserialization</a
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-navitem"><code>NavItem</code></a>
+      <ul>
+         <li><a href="#navitem-fields">Fields</a></li>
+         <li>
+            <a href="#navitem-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#navitem-default"><code>Default</code> Implementation</a>
+         </li>
+         <li>
+            <a href="#navitem-serialization"
+               >Serialization &amp; Deserialization</a
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-siteconfig"><code>SiteConfig</code></a>
+      <ul>
+         <li><a href="#siteconfig-fields">Fields</a></li>
+         <li>
+            <a href="#siteconfig-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#siteconfig-default"
+               ><code>Default</code> Implementation</a
+            >
+         </li>
+         <li>
+            <a href="#siteconfig-serialization"
+               >Serialization &amp; Deserialization</a
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-config"><code>Config</code></a>
+      <ul>
+         <li><a href="#config-fields">Fields</a></li>
+         <li>
+            <a href="#config-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#config-with_site_name"
+               >Builder Method <code>with_site_name()</code></a
+            >
+         </li>
+         <li>
+            <a href="#config-rule-management">Rule Management Methods</a>
+            <ul>
+               <li>
+                  <a href="#config-add_content_rule"
+                     ><code>add_content_rule()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#config-find_rule_by_name"
+                     ><code>find_rule_by_name()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#config-remove_rule_by_name"
+                     ><code>remove_rule_by_name()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#config-has_duplicate_rule_names"
+                     ><code>has_duplicate_rule_names()</code></a
+                  >
+               </li>
+            </ul>
+         </li>
+         <li>
+            <a href="#config-validate"
+               >Validation Method <code>validate()</code></a
+            >
+         </li>
+         <li>
+            <a href="#config-serialization">Serialization Methods</a>
+            <ul>
+               <li>
+                  <a href="#config-from_yaml_str"
+                     ><code>from_yaml_str()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#config-to_yaml_string"
+                     ><code>to_yaml_string()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#config-from_json_str"
+                     ><code>from_json_str()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#config-to_json_string"
+                     ><code>to_json_string()</code></a
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li><a href="#error-handling">Error Handling</a></li>
+   <li><a href="#serialization-details">Serialization Details</a></li>
+   <li><a href="#examples-from-tests">Examples from Tests</a></li>
+   <li><a href="#testing-suite-overview">Testing Suite Overview</a></li>
+   <li><a href="#conclusion">Conclusion</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>
+   <code>librawssg_config</code> provides the central configuration types used
+   by the static site generator. The main <code>Config</code> struct combines
+   site settings (<code>SiteConfig</code>), build paths
+   (<code>BuildConfig</code>), content processing rules
+   (<code>ContentRule</code>), and arbitrary extra data. All types are
+   serializable/deserializable via <code>serde</code>, enabling configuration to
+   be read from and written to YAML or JSON files.
+</p>
+<p>
+   The types are designed with sensible defaults and include a
+   <code>validate()</code> method to ensure the configuration is internally
+   consistent and safe (e.g., preventing path traversal in patterns).
+</p>
+<hr />
+<h2 id="modules">Modules</h2>
+<p>
+   The crate root (<code>lib.rs</code>) declares the following public modules:
+</p>
+<ul>
+   <li><code>build</code> – Contains <code>BuildConfig</code>.</li>
+   <li><code>config</code> – Contains <code>Config</code>.</li>
+   <li><code>content_rule</code> – Contains <code>ContentRule</code>.</li>
+   <li><code>nav</code> – Contains <code>NavItem</code>.</li>
+   <li><code>site</code> – Contains <code>SiteConfig</code>.</li>
+</ul>
+<p>All public types are re‑exported at the crate root for convenience:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> build::BuildConfig;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> config::Config;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> content_rule::ContentRule;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> nav::NavItem;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> site::SiteConfig;
+</code></pre>
+<hr />
+<h2 id="struct-buildconfig-">Struct <code>BuildConfig</code></h2>
+<p>Represents filesystem path configuration for the build process.</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">BuildConfig</span></span> {
+    <span class="hljs-meta">#[serde(default = <span class="hljs-meta-string">"default_content_dir"</span>)]</span>
+    <span class="hljs-keyword">pub</span> content_dir: <span class="hljs-built_in">String</span>,
+    <span class="hljs-meta">#[serde(default = <span class="hljs-meta-string">"default_output_dir"</span>)]</span>
+    <span class="hljs-keyword">pub</span> output_dir: <span class="hljs-built_in">String</span>,
+    <span class="hljs-meta">#[serde(default = <span class="hljs-meta-string">"default_templates_dir"</span>)]</span>
+    <span class="hljs-keyword">pub</span> templates_dir: <span class="hljs-built_in">String</span>,
+    <span class="hljs-meta">#[serde(default = <span class="hljs-meta-string">"default_static_dir"</span>)]</span>
+    <span class="hljs-keyword">pub</span> static_dir: <span class="hljs-built_in">String</span>,
+}
+</code></pre>
+<h3 id="buildconfig-fields">BuildConfig Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Default Value</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>content_dir</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;content&quot;</code></td>
+         <td>Directory containing source content files.</td>
+      </tr>
+      <tr>
+         <td><code>output_dir</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;dist&quot;</code></td>
+         <td>Directory where generated site output will be written.</td>
+      </tr>
+      <tr>
+         <td><code>templates_dir</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;templates&quot;</code></td>
+         <td>Directory containing template files.</td>
+      </tr>
+      <tr>
+         <td><code>static_dir</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;static&quot;</code></td>
+         <td>Directory containing static assets (copied as-is).</td>
+      </tr>
+   </tbody>
+</table>
+<p>
+   <strong>Note</strong>: <code>#[non_exhaustive]</code> prevents external
+   crates from exhaustively matching or constructing with a struct literal. Use
+   the provided constructors or update syntax.
+</p>
+<h3 id="buildconfig-new">BuildConfig::new</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>() -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a <code>BuildConfig</code> with default
+   values (identical to <code>BuildConfig::default()</code>).
+</p>
+<p>
+   <strong>Returns</strong>: A new <code>BuildConfig</code> with all fields set
+   to their defaults.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">let <span class="hljs-keyword">build </span>= <span class="hljs-keyword">BuildConfig::new();
+</span>assert_eq!(<span class="hljs-keyword">build.content_dir, </span><span class="hljs-string">"content"</span>)<span class="hljs-comment">;</span>
+</code></pre>
+<h3 id="buildconfig-default">BuildConfig Default</h3>
+<p>The <code>Default</code> trait is implemented with the following values:</p>
+<ul>
+   <li><code>content_dir</code>: <code>&quot;content&quot;</code></li>
+   <li><code>output_dir</code>: <code>&quot;dist&quot;</code></li>
+   <li><code>templates_dir</code>: <code>&quot;templates&quot;</code></li>
+   <li><code>static_dir</code>: <code>&quot;static&quot;</code></li>
+</ul>
+<p>
+   These defaults can be overridden during deserialization; missing fields in
+   serialized data will fall back to these defaults (thanks to
+   <code>#[serde(default = &quot;...&quot;)]</code>).
+</p>
+<h3 id="buildconfig-serialization">BuildConfig Serialization</h3>
+<p>
+   <code>BuildConfig</code> derives <code>Serialize</code> and
+   <code>Deserialize</code>. When deserializing from YAML/JSON, any omitted
+   fields will use the specified default functions. This allows partial
+   configuration.
+</p>
+<p><strong>Example</strong> (from tests):</p>
+<pre><code class="lang-rust">let yaml = <span class="hljs-string">"content_dir: custom_content\noutput_dir: public\n"</span><span class="hljs-comment">;</span>
+let <span class="hljs-keyword">build: </span><span class="hljs-keyword">BuildConfig </span>= serde_yaml::from_str(yaml)?<span class="hljs-comment">;</span>
+assert_eq!(<span class="hljs-keyword">build.content_dir, </span><span class="hljs-string">"custom_content"</span>)<span class="hljs-comment">;</span>
+assert_eq!(<span class="hljs-keyword">build.templates_dir, </span><span class="hljs-string">"templates"</span>)<span class="hljs-comment">; // default</span>
+</code></pre>
+<hr />
+<h2 id="struct-contentrule-">Struct <code>ContentRule</code></h2>
+<p>Defines how a certain group of content files should be processed.</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">ContentRule</span></span> {
+    <span class="hljs-keyword">pub</span> name: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> pattern: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> template: <span class="hljs-built_in">String</span>,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> list_template: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> list_enabled: <span class="hljs-keyword">bool</span>,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> extra: HashMap&lt;<span class="hljs-built_in">String</span>, serde_json::Value&gt;,
+}
+</code></pre>
+<h3 id="contentrule-fields">ContentRule Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Default</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>name</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;&quot;</code></td>
+         <td>
+            Unique identifier for the rule (e.g., <code>&quot;blog&quot;</code>,
+            <code>&quot;page&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>pattern</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;&quot;</code></td>
+         <td>
+            Glob pattern matching content files (e.g.,
+            <code>&quot;**/*.md&quot;</code>). Must not contain <code>..</code>.
+         </td>
+      </tr>
+      <tr>
+         <td><code>template</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;&quot;</code></td>
+         <td>Name of the template to use for rendering each matched file.</td>
+      </tr>
+      <tr>
+         <td><code>list_template</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>None</code></td>
+         <td>
+            Optional template name for rendering list pages (e.g., index pages).
+         </td>
+      </tr>
+      <tr>
+         <td><code>list_enabled</code></td>
+         <td><code>bool</code></td>
+         <td><code>false</code></td>
+         <td>Whether list generation is enabled for this rule.</td>
+      </tr>
+      <tr>
+         <td><code>extra</code></td>
+         <td><code>HashMap&lt;String, serde_json::Value&gt;</code></td>
+         <td>empty map</td>
+         <td>Arbitrary extra data associated with the rule.</td>
+      </tr>
+   </tbody>
+</table>
+<h3 id="contentrule-new">ContentRule::new</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>(
+    name: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    pattern: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    template: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a <code>ContentRule</code> with the
+   required fields (<code>name</code>, <code>pattern</code>,
+   <code>template</code>). All other fields are set to their defaults.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>name</code>: The rule name (converted to <code>String</code>).</li>
+   <li>
+      <code>pattern</code>: The glob pattern (converted to <code>String</code>).
+   </li>
+   <li>
+      <code>template</code>: The template name (converted to
+      <code>String</code>).
+   </li>
+</ul>
+<p><strong>Returns</strong>: A new <code>ContentRule</code> instance.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> rule = ContentRule::<span class="hljs-keyword">new</span>(<span class="hljs-string">"blog"</span>, <span class="hljs-string">"**/*.md"</span>, <span class="hljs-string">"post"</span>);
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(rule.name, <span class="hljs-string">"blog"</span>);
+<span class="hljs-keyword">assert</span>!(!rule.list<span class="hljs-number">_</span>enabled);
+</code></pre>
+<h3 id="contentrule-default">ContentRule Default</h3>
+<p>The <code>Default</code> implementation (derived) sets:</p>
+<ul>
+   <li>
+      <code>name</code>, <code>pattern</code>, <code>template</code>: empty
+      strings
+   </li>
+   <li><code>list_template</code>: <code>None</code></li>
+   <li><code>list_enabled</code>: <code>false</code></li>
+   <li><code>extra</code>: empty map</li>
+</ul>
+<h3 id="contentrule-serialization">ContentRule Serialization</h3>
+<p>
+   Serializes/deserializes with <code>serde</code>. Missing optional fields
+   default as specified. The <code>extra</code> map can hold any JSON‑compatible
+   values.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-keyword">mut</span> rule = ContentRule::new(<span class="hljs-string">"page"</span>, <span class="hljs-string">"**/*.html"</span>, <span class="hljs-string">"base"</span>);
+rule.list_enabled = <span class="hljs-literal">true</span>;
+rule.list_template = <span class="hljs-literal">Some</span>(<span class="hljs-string">"list"</span>.into());
+rule.extra.insert(<span class="hljs-string">"key"</span>.into(), json!(<span class="hljs-string">"value"</span>));
+<span class="hljs-keyword">let</span> yaml = serde_yaml::to_string(&amp;rule)?;
+<span class="hljs-keyword">let</span> parsed: ContentRule = serde_yaml::from_str(&amp;yaml)?;
+<span class="hljs-built_in">assert_eq!</span>(rule, parsed);
+</code></pre>
+<hr />
+<h2 id="struct-navitem-">Struct <code>NavItem</code></h2>
+<p>Represents an item in a navigation menu (navbar or sidebar).</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">NavItem</span></span> {
+    <span class="hljs-keyword">pub</span> label: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> url: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> children: <span class="hljs-built_in">Vec</span>&lt;<span class="hljs-keyword">Self</span>&gt;,
+}
+</code></pre>
+<h3 id="navitem-fields">NavItem Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Default</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>label</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;&quot;</code></td>
+         <td>Display text for the navigation link.</td>
+      </tr>
+      <tr>
+         <td><code>url</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;&quot;</code></td>
+         <td>URL the link points to (relative or absolute).</td>
+      </tr>
+      <tr>
+         <td><code>children</code></td>
+         <td><code>Vec&lt;NavItem&gt;</code></td>
+         <td>empty</td>
+         <td>Nested sub‑items, enabling hierarchical menus.</td>
+      </tr>
+   </tbody>
+</table>
+<h3 id="navitem-new">NavItem::new</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>(label: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;, url: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a <code>NavItem</code> with a label and
+   URL. The <code>children</code> vector starts empty.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>label</code>: Display label.</li>
+   <li><code>url</code>: Target URL.</li>
+</ul>
+<p><strong>Returns</strong>: A new <code>NavItem</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> item = NavItem::<span class="hljs-keyword">new</span>(<span class="hljs-string">"Home"</span>, <span class="hljs-string">"/"</span>);
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(item.label, <span class="hljs-string">"Home"</span>);
+<span class="hljs-keyword">assert</span>!(item.children.<span class="hljs-keyword">is</span><span class="hljs-number">_</span>empty());
+</code></pre>
+<h3 id="navitem-default">NavItem Default</h3>
+<p>
+   <code>NavItem::default()</code> creates an item with empty label, empty URL,
+   and no children.
+</p>
+<h3 id="navitem-serialization">NavItem Serialization</h3>
+<p>
+   Supports serialization and deserialization via <code>serde</code>. Nested
+   children are handled recursively.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-keyword">parent</span> = NavItem<span class="hljs-type">::new</span>(<span class="hljs-string">"Docs"</span>, <span class="hljs-string">"/docs"</span>);
+<span class="hljs-keyword">parent</span>.children.push(NavItem<span class="hljs-type">::new</span>(<span class="hljs-string">"API"</span>, <span class="hljs-string">"/docs/api"</span>));
+<span class="hljs-keyword">let</span> json = serde_json<span class="hljs-type">::to_string</span>(&amp;<span class="hljs-keyword">parent</span>)?;
+<span class="hljs-keyword">let</span> parsed: NavItem = serde_json<span class="hljs-type">::from_str</span>(&amp;json)?;
+assert_eq!(<span class="hljs-keyword">parent</span>, parsed);
+</code></pre>
+<hr />
+<h2 id="struct-siteconfig-">Struct <code>SiteConfig</code></h2>
+<p>Holds global site metadata and navigation structures.</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">SiteConfig</span></span> {
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> navbar: <span class="hljs-built_in">Vec</span>&lt;super::NavItem&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> sidebar: <span class="hljs-built_in">Vec</span>&lt;super::NavItem&gt;,
+    <span class="hljs-meta">#[serde(default = <span class="hljs-meta-string">"default_site_name"</span>)]</span>
+    <span class="hljs-keyword">pub</span> site_name: <span class="hljs-built_in">String</span>,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> description: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default = <span class="hljs-meta-string">"default_language"</span>)]</span>
+    <span class="hljs-keyword">pub</span> language: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> base_url: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> author: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> repo_url: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> license: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> extra: HashMap&lt;<span class="hljs-built_in">String</span>, serde_json::Value&gt;,
+}
+</code></pre>
+<h3 id="siteconfig-fields">SiteConfig Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Default</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>navbar</code></td>
+         <td><code>Vec&lt;NavItem&gt;</code></td>
+         <td>empty</td>
+         <td>Navigation items for the top bar.</td>
+      </tr>
+      <tr>
+         <td><code>sidebar</code></td>
+         <td><code>Vec&lt;NavItem&gt;</code></td>
+         <td>empty</td>
+         <td>Navigation items for the sidebar.</td>
+      </tr>
+      <tr>
+         <td><code>site_name</code></td>
+         <td><code>String</code></td>
+         <td><code>&quot;librawssg&quot;</code></td>
+         <td>The name of the website.</td>
+      </tr>
+      <tr>
+         <td><code>description</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>None</code></td>
+         <td>Short site description.</td>
+      </tr>
+      <tr>
+         <td><code>language</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>Some(&quot;en&quot;)</code></td>
+         <td>
+            Site language code (e.g., <code>&quot;en&quot;</code>,
+            <code>&quot;id&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>base_url</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>None</code></td>
+         <td>
+            Base URL for the site; must start with <code>http://</code> or
+            <code>https://</code> if set.
+         </td>
+      </tr>
+      <tr>
+         <td><code>author</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>None</code></td>
+         <td>Default author name.</td>
+      </tr>
+      <tr>
+         <td><code>repo_url</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>None</code></td>
+         <td>URL to the source repository.</td>
+      </tr>
+      <tr>
+         <td><code>license</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td><code>None</code></td>
+         <td>License identifier (e.g., <code>&quot;MIT&quot;</code>).</td>
+      </tr>
+      <tr>
+         <td><code>extra</code></td>
+         <td><code>HashMap&lt;String, serde_json::Value&gt;</code></td>
+         <td>empty map</td>
+         <td>Arbitrary extra site‑wide metadata.</td>
+      </tr>
+   </tbody>
+</table>
+<h3 id="siteconfig-new">SiteConfig::new</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>(site_name: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a <code>SiteConfig</code> with a custom
+   site name. All other fields are set to their defaults (navbar/sidebar empty,
+   language <code>Some(&quot;en&quot;)</code>, etc.).
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>site_name</code>: The site name (converted to <code>String</code>).
+   </li>
+</ul>
+<p><strong>Returns</strong>: A new <code>SiteConfig</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> site = SiteConfig::new(<span class="hljs-string">"My Site"</span>);
+<span class="hljs-built_in">assert_eq!</span>(site.site_name, <span class="hljs-string">"My Site"</span>);
+<span class="hljs-built_in">assert_eq!</span>(site.language.as_deref(), <span class="hljs-literal">Some</span>(<span class="hljs-string">"en"</span>));
+</code></pre>
+<h3 id="siteconfig-default">SiteConfig Default</h3>
+<p><code>SiteConfig::default()</code> sets:</p>
+<ul>
+   <li><code>site_name</code>: <code>&quot;librawssg&quot;</code></li>
+   <li><code>language</code>: <code>Some(&quot;en&quot;)</code></li>
+   <li>All <code>Option</code> fields: <code>None</code></li>
+   <li>Vectors and map: empty</li>
+</ul>
+<h3 id="siteconfig-serialization">SiteConfig Serialization</h3>
+<p>
+   Supports YAML/JSON. Missing fields during deserialization use defaults. The
+   <code>language</code> default is provided by a custom function.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-keyword">mut</span> site = SiteConfig::new(<span class="hljs-string">"Test"</span>);
+site.extra.insert(<span class="hljs-string">"foo"</span>.into(), json!(<span class="hljs-string">"bar"</span>));
+<span class="hljs-keyword">let</span> yaml = serde_yaml::to_string(&amp;site)?;
+<span class="hljs-keyword">let</span> parsed: SiteConfig = serde_yaml::from_str(&amp;yaml)?;
+<span class="hljs-built_in">assert_eq!</span>(site, parsed);
+</code></pre>
+<hr />
+<h2 id="struct-config-">Struct <code>Config</code></h2>
+<p>The top‑level configuration combining all other components.</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Config</span></span> {
+    <span class="hljs-keyword">pub</span> site: SiteConfig,
+    <span class="hljs-keyword">pub</span> build: BuildConfig,
+    <span class="hljs-keyword">pub</span> content_rules: <span class="hljs-built_in">Vec</span>&lt;ContentRule&gt;,
+    <span class="hljs-meta">#[serde(default)]</span>
+    <span class="hljs-keyword">pub</span> extra: HashMap&lt;<span class="hljs-built_in">String</span>, serde_json::Value&gt;,
+}
+</code></pre>
+<h3 id="config-fields">Config Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Default</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>site</code></td>
+         <td><code>SiteConfig</code></td>
+         <td>
+            <code>SiteConfig::default()</code> (site name &quot;librawssg&quot;)
+         </td>
+         <td>Global site configuration.</td>
+      </tr>
+      <tr>
+         <td><code>build</code></td>
+         <td><code>BuildConfig</code></td>
+         <td><code>BuildConfig::default()</code></td>
+         <td>Build path settings.</td>
+      </tr>
+      <tr>
+         <td><code>content_rules</code></td>
+         <td><code>Vec&lt;ContentRule&gt;</code></td>
+         <td>empty</td>
+         <td>List of content processing rules.</td>
+      </tr>
+      <tr>
+         <td><code>extra</code></td>
+         <td><code>HashMap&lt;String, serde_json::Value&gt;</code></td>
+         <td>empty map</td>
+         <td>Arbitrary top‑level extra data.</td>
+      </tr>
+   </tbody>
+</table>
+<h3 id="config-new">Config::new</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>() -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a <code>Config</code> with all fields
+   defaulted. Equivalent to <code>Config::default()</code>.
+</p>
+<p><strong>Returns</strong>: A new <code>Config</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">let <span class="hljs-built_in">config</span> = <span class="hljs-built_in">Config</span>::new()<span class="hljs-comment">;</span>
+assert!(<span class="hljs-built_in">config</span>.content_rules.is_empty())<span class="hljs-comment">;</span>
+</code></pre>
+<h3 id="config-with_site_name">Config::with_site_name</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">with_site_name</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, name: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Builder‑style method that sets the
+   <code>site.site_name</code> and returns the modified <code>Config</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>name</code>: The new site name.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: The same <code>Config</code> with updated site
+   name.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">let <span class="hljs-built_in">config</span> = <span class="hljs-built_in">Config</span>::new().with_site_name(<span class="hljs-string">"My Awesome Site"</span>)<span class="hljs-comment">;</span>
+assert_eq!(<span class="hljs-built_in">config</span>.site.site_name, <span class="hljs-string">"My Awesome Site"</span>)<span class="hljs-comment">;</span>
+</code></pre>
+<h3 id="config-rule-management">Config Rule Management</h3>
+<h4 id="-add_content_rule-"><code>add_content_rule</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">add_content_rule</span></span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, rule: ContentRule)
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Appends a <code>ContentRule</code> to the
+   <code>content_rules</code> vector.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>rule</code>: The rule to add.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-built_in">config</span>.add_content_rule(ContentRule::<span class="hljs-keyword">new</span>(<span class="hljs-string">"blog"</span>, <span class="hljs-string">"**/*.md"</span>, <span class="hljs-string">"post"</span>));
+</code></pre>
+<h4 id="-find_rule_by_name-"><code>find_rule_by_name</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">find_rule_by_name</span></span>(&amp;<span class="hljs-keyword">self</span>, name: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Option</span>&lt;&amp;ContentRule&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Searches for a content rule by its
+   <code>name</code> field.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>name</code>: The rule name to search for.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Some(&amp;ContentRule)</code> if found,
+   otherwise <code>None</code>.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">if</span> <span class="hljs-keyword">let</span> Some(rule) = config.find<span class="hljs-number">_</span>rule<span class="hljs-number">_</span><span class="hljs-meta">by</span><span class="hljs-number">_n</span>ame(<span class="hljs-string">"blog"</span>) {
+    <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<h4 id="-remove_rule_by_name-"><code>remove_rule_by_name</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">remove_rule_by_name</span></span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, name: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Option</span>&lt;ContentRule&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Removes and returns the first content rule whose
+   <code>name</code> matches the given string.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>name</code>: The name of the rule to remove.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Some(ContentRule)</code> if found and
+   removed, otherwise <code>None</code>.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> removed = config.remove<span class="hljs-number">_</span>rule<span class="hljs-number">_</span><span class="hljs-meta">by</span><span class="hljs-number">_n</span>ame(<span class="hljs-string">"blog"</span>);
+</code></pre>
+<h4 id="-has_duplicate_rule_names-"><code>has_duplicate_rule_names</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">has_duplicate_rule_names</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-keyword">bool</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Checks whether any two content rules share the same
+   <code>name</code>.
+</p>
+<p>
+   <strong>Returns</strong>: <code>true</code> if duplicates exist,
+   <code>false</code> otherwise.
+</p>
+<p>
+   <strong>Implementation</strong>: Uses a <code>HashSet</code> to detect
+   duplicates; O(n) time.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-built_in">if</span> <span class="hljs-built_in">config</span>.has_duplicate_rule_names() {
+    <span class="hljs-comment">// handle error</span>
+}
+</code></pre>
+<h3 id="config-validate">Config::validate</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">validate</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;()&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Performs comprehensive validation of the
+   configuration. Returns <code>Ok(())</code> if the configuration is valid,
+   otherwise an <code>Err(Error::Validation(...))</code> with a descriptive
+   message.
+</p>
+<p><strong>Validation Rules</strong>:</p>
+<ol>
+   <li><code>site.site_name</code> must not be empty or whitespace‑only.</li>
+   <li>At least one content rule must be defined.</li>
+   <li>No duplicate content rule names.</li>
+   <li>
+      For each content rule (indexed from 0):
+      <ul>
+         <li><code>name</code> must not be empty or whitespace‑only.</li>
+         <li><code>pattern</code> must not be empty or whitespace‑only.</li>
+         <li>
+            <code>pattern</code> must not contain the substring
+            <code>&quot;..&quot;</code> (to prevent path traversal).
+         </li>
+         <li><code>template</code> must not be empty or whitespace‑only.</li>
+      </ul>
+   </li>
+   <li>
+      If <code>site.base_url</code> is <code>Some</code>, it must start with
+      <code>&quot;http://&quot;</code> or <code>&quot;https://&quot;</code>.
+   </li>
+</ol>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(())</code> if all checks pass.</li>
+   <li>
+      <code>Err(Error::Validation(message))</code> on the first failure
+      encountered.
+   </li>
+</ul>
+<p><strong>Example</strong> (from tests):</p>
+<pre><code class="lang-rust">let config = valid_config()<span class="hljs-comment">; // has one rule</span>
+assert!(<span class="hljs-name">config</span>.validate().is_ok())<span class="hljs-comment">;</span>
+</code></pre>
+<h3 id="config-serialization">Config Serialization</h3>
+<p>
+   The <code>Config</code> struct can be serialized to and deserialized from
+   YAML and JSON via convenience methods.
+</p>
+<h4 id="-from_yaml_str-"><code>from_yaml_str</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">from_yaml_str</span></span>(yaml: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-keyword">Self</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Parses a YAML string into a <code>Config</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>yaml</code>: YAML content as a string.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(Config)</code> on success.</li>
+   <li>
+      <code>Err(Error::Config)</code> if the YAML is invalid (with the
+      underlying <code>serde_yaml</code> error message included).
+   </li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">let <span class="hljs-built_in">config</span> = <span class="hljs-built_in">Config</span>::from_yaml_str(<span class="hljs-string">"site:\n  site_name: Test\n"</span>)?<span class="hljs-comment">;</span>
+</code></pre>
+<h4 id="-to_yaml_string-"><code>to_yaml_string</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">to_yaml_string</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Serializes the <code>Config</code> to a YAML
+   string.
+</p>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(String)</code> with YAML representation.</li>
+   <li><code>Err(Error::Serialization)</code> if serialization fails.</li>
+</ul>
+<h4 id="-from_json_str-"><code>from_json_str</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">from_json_str</span></span>(json: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-keyword">Self</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Parses a JSON string into a <code>Config</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>json</code>: JSON content as a string.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(Config)</code> on success.</li>
+   <li><code>Err(Error::Config)</code> if the JSON is invalid.</li>
+</ul>
+<h4 id="-to_json_string-"><code>to_json_string</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">to_json_string</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Serializes the <code>Config</code> to a JSON
+   string.
+</p>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(String)</code> with JSON representation.</li>
+   <li><code>Err(Error::Serialization)</code> on failure.</li>
+</ul>
+<p><strong>Example roundtrip</strong>:</p>
+<pre><code class="lang-rust">let yaml = <span class="hljs-built_in">config</span>.to_yaml_string()?<span class="hljs-comment">;</span>
+let parsed = <span class="hljs-built_in">Config</span>::from_yaml_str(&amp;yaml)?<span class="hljs-comment">;</span>
+assert_eq!(<span class="hljs-built_in">config</span>, parsed)<span class="hljs-comment">;</span>
+</code></pre>
+<hr />
+<h2 id="error-handling">Error Handling</h2>
+<p>
+   The <code>Config</code> methods and <code>validate</code> use
+   <code>librawssg_error::Result&lt;T&gt;</code> (alias for
+   <code>std::result::Result&lt;T, librawssg_error::Error&gt;</code>). The
+   relevant error variants used in this crate are:
+</p>
+<ul>
+   <li><code>Error::Config</code> – For YAML/JSON deserialization failures.</li>
+   <li><code>Error::Serialization</code> – For serialization failures.</li>
+   <li>
+      <code>Error::Validation</code> – For <code>validate()</code> failures.
+   </li>
+</ul>
+<p>
+   All error messages are descriptive and include context (e.g., which rule is
+   invalid, what condition was violated).
+</p>
+<hr />
+<h2 id="serialization-details">Serialization Details</h2>
+<p>
+   All configuration structs derive <code>Serialize</code> and
+   <code>Deserialize</code> from <code>serde</code>. Default values are applied
+   during deserialization for missing fields via
+   <code>#[serde(default = &quot;function&quot;)]</code> or
+   <code>#[serde(default)]</code> (which uses
+   <code>Default::default()</code> for the field type).
+</p>
+<ul>
+   <li><code>BuildConfig</code>: Each field has a custom default function.</li>
+   <li>
+      <code>ContentRule</code>: Optional fields use
+      <code>#[serde(default)]</code>.
+   </li>
+   <li>
+      <code>NavItem</code>: No special defaults; all fields are required in
+      input, but <code>Default</code> is derived for programmatic creation.
+   </li>
+   <li>
+      <code>SiteConfig</code>: <code>site_name</code> has a custom default,
+      <code>language</code> has a custom default returning
+      <code>Some(&quot;en&quot;)</code>, others use
+      <code>#[serde(default)]</code>.
+   </li>
+   <li>
+      <code>Config</code>: <code>site</code> and <code>build</code> are required
+      in YAML/JSON (they don&#39;t have <code>#[serde(default)]</code> at the
+      field level, but the struct itself derives <code>Default</code> and the
+      fields are not marked optional; however, when deserializing a top‑level
+      <code>Config</code>, missing <code>site</code> or <code>build</code> will
+      cause an error because they are not optional. In practice, configuration
+      files should include these sections or rely on the
+      <code>Default</code> implementation when constructing programmatically).
+      <strong>Important</strong>: The <code>Config</code> struct&#39;s fields
+      are not marked with <code>#[serde(default)]</code>, so during
+      deserialization, missing <code>site</code> or <code>build</code> will
+      cause a parse error. Users must provide at least <code>site</code> and
+      <code>build</code> keys (can be empty maps to get defaults via the inner
+      structs&#39; own defaults). The <code>content_rules</code> and
+      <code>extra</code> fields have <code>#[serde(default)]</code> so they can
+      be omitted.
+   </li>
+</ul>
+<hr />
+<h2 id="examples-from-tests">Examples from Tests</h2>
+<p>
+   The test suite provides extensive examples for each type. Below are selected
+   snippets.
+</p>
+<h3 id="buildconfig">BuildConfig</h3>
+<pre><code class="lang-rust">let <span class="hljs-keyword">build </span>= <span class="hljs-keyword">BuildConfig::default();
+</span>assert_eq!(<span class="hljs-keyword">build.output_dir, </span><span class="hljs-string">"dist"</span>)<span class="hljs-comment">;</span>
+
+let yaml = <span class="hljs-string">"content_dir: custom_content\noutput_dir: public\n"</span><span class="hljs-comment">;</span>
+let <span class="hljs-keyword">build: </span><span class="hljs-keyword">BuildConfig </span>= serde_yaml::from_str(yaml)?<span class="hljs-comment">;</span>
+assert_eq!(<span class="hljs-keyword">build.content_dir, </span><span class="hljs-string">"custom_content"</span>)<span class="hljs-comment">;</span>
+assert_eq!(<span class="hljs-keyword">build.templates_dir, </span><span class="hljs-string">"templates"</span>)<span class="hljs-comment">;</span>
+</code></pre>
+<h3 id="contentrule">ContentRule</h3>
+<pre><code class="lang-rust">let mut <span class="hljs-keyword">rule</span> = ContentRule::new(<span class="hljs-string">"page"</span>, <span class="hljs-string">"**/*.html"</span>, <span class="hljs-string">"base"</span>);
+<span class="hljs-keyword">rule</span>.list_enabled = <span class="hljs-literal">true</span>;
+<span class="hljs-keyword">rule</span>.list_template = Some(<span class="hljs-string">"list"</span>.into());
+<span class="hljs-keyword">rule</span>.extra.insert(<span class="hljs-string">"key"</span>.into(), json!(<span class="hljs-string">"value"</span>));
+</code></pre>
+<h3 id="navitem">NavItem</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> mut <span class="hljs-keyword">parent</span> = NavItem<span class="hljs-type">::new</span>(<span class="hljs-string">"Docs"</span>, <span class="hljs-string">"/docs"</span>);
+<span class="hljs-keyword">parent</span>.children.push(NavItem<span class="hljs-type">::new</span>(<span class="hljs-string">"API"</span>, <span class="hljs-string">"/docs/api"</span>));
+</code></pre>
+<h3 id="siteconfig">SiteConfig</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> site = SiteConfig::new(<span class="hljs-string">"My Site"</span>);
+<span class="hljs-built_in">assert_eq!</span>(site.language.as_deref(), <span class="hljs-literal">Some</span>(<span class="hljs-string">"en"</span>));
+</code></pre>
+<h3 id="config-validation">Config Validation</h3>
+<pre><code class="lang-rust">let mut <span class="hljs-built_in">config</span> = <span class="hljs-built_in">Config</span>::new().with_site_name(<span class="hljs-string">"My Site"</span>)<span class="hljs-comment">;</span>
+<span class="hljs-built_in">config</span>.<span class="hljs-keyword">add_content_rule(ContentRule::new("page", </span><span class="hljs-string">"**/*.html"</span>, <span class="hljs-string">"base"</span>))<span class="hljs-comment">;</span>
+assert!(<span class="hljs-built_in">config</span>.validate().is_ok())<span class="hljs-comment">;</span>
+
+<span class="hljs-built_in">config</span>.site.<span class="hljs-keyword">base_url </span>= Some(<span class="hljs-string">"ftp://example.com"</span>.to_string())<span class="hljs-comment">;</span>
+assert!(<span class="hljs-built_in">config</span>.validate().is_err())<span class="hljs-comment">;</span>
+</code></pre>
+<hr />
+<h2 id="testing-suite-overview">Testing Suite Overview</h2>
+<p>The crate includes five test files:</p>
+<ul>
+   <li>
+      <code>build_tests.rs</code> – Tests <code>BuildConfig</code> defaults,
+      <code>new()</code>, and YAML roundtrip.
+   </li>
+   <li>
+      <code>config_tests.rs</code> – Extensive tests for <code>Config</code>:
+      creation, rule management, validation (all rules), YAML/JSON roundtrip,
+      and error cases.
+   </li>
+   <li>
+      <code>content_rule_tests.rs</code> – Tests
+      <code>ContentRule</code> constructor, defaults, and serialization.
+   </li>
+   <li>
+      <code>nav_tests.rs</code> – Tests <code>NavItem</code> constructor,
+      defaults, children, and serialization.
+   </li>
+   <li>
+      <code>site_tests.rs</code> – Tests <code>SiteConfig</code> constructor,
+      defaults, and serialization.
+   </li>
+</ul>
+<p>
+   All tests are self‑contained and use the <code>must!</code> macro to unwrap
+   results with a helpful message on failure. They serve as executable examples
+   of the API usage.
+</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>
+   <code>librawssg_config</code> provides a clean and extensible configuration
+   system for a static site generator. With sensible defaults, comprehensive
+   validation, and full serde support, it covers the needs of both simple and
+   complex site configurations. The types are designed for ergonomic use and can
+   be easily loaded from YAML or JSON files, making it straightforward to define
+   site‑wide settings, build paths, navigation, and content processing rules.
+</p>
+<p>For further details, refer to the source code and test files.</p>
