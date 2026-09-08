@@ -1,14 +1,20 @@
+{% import "macros.tera" as nav %}
 {% include "partials/head.tera" %}
 <body>
     {% include "partials/navbar.tera" %}
-    <div class="container">
+
+    <div class="wrapper">
         {% include "partials/sidebar.tera" %}
         <main class="content">
-            <article>
+            {% if page_breadcrumb %}
+                {{ nav::render_breadcrumb(items=page_breadcrumb) }}
+            {% endif %}
+            <article class="markdown-body">
                 {{ page_content | safe }}
             </article>
         </main>
     </div>
+
     {% include "partials/footer.tera" %}
     {% include "partials/scripts.tera" %}
 </body>
