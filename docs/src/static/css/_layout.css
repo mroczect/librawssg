@@ -1,3 +1,7 @@
+/* ==========================================================================
+   _layout.css
+   ========================================================================== */
+
 .wrapper {
   display: flex;
   flex: 1;
@@ -14,20 +18,7 @@
 
 .content {
   flex: 1;
-  padding: 2rem;
+  padding: 1.5rem 2.5rem;
   max-width: var(--content-max-width);
   min-width: 0;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  margin-right: -10px;
-  margin-left: -10px;
-}
-
-.col {
-  flex: 1;
-  padding-right: 10px;
-  padding-left: 10px;
 }
