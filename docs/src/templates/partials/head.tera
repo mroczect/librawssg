@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="{{ site.language | default(value='en') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page_title %}{{ page_title }} | {% endif %}{{ site.site_name }}</title>
+    <meta name="description" content="{{ page_description | default(value=site.description | default(value='')) }}">
+    {% include "partials/stylesheets.tera" %}
+</head>
