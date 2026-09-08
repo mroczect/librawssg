@@ -1,0 +1,1007 @@
+<h1 id="librawssg_handler">librawssg_handler</h1>
+<p>
+   <strong>Version</strong>: 1.0.0 (implied)<br /><strong>Crate name</strong>:
+   <code>librawssg_handler</code><br /><strong>Description</strong>: Core data
+   structures and traits for building a static site generator (SSG) handler.
+   Provides <code>Document</code>, <code>Metadata</code>, and a
+   <code>Processor</code> trait for processing content files.
+</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+   <li><a href="#overview">Overview</a></li>
+   <li><a href="#modules">Modules</a></li>
+   <li>
+      <a href="#struct-document">Struct <code>Document</code></a>
+      <ul>
+         <li><a href="#document-fields">Fields</a></li>
+         <li>
+            <a href="#document-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#document-relative_url"
+               >Method <code>relative_url()</code></a
+            >
+         </li>
+         <li>
+            <a href="#document-add_taxonomy"
+               >Method <code>add_taxonomy()</code></a
+            >
+         </li>
+         <li>
+            <a href="#document-depth">Method <code>depth()</code></a>
+         </li>
+         <li>
+            <a href="#document-with_list_items"
+               >Method <code>with_list_items()</code></a
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-metadata">Struct <code>Metadata</code></a>
+      <ul>
+         <li><a href="#metadata-fields">Fields</a></li>
+         <li>
+            <a href="#metadata-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#metadata-is_draft">Method <code>is_draft()</code></a>
+         </li>
+         <li>
+            <a href="#metadata-insert_extra"
+               >Method <code>insert_extra()</code></a
+            >
+         </li>
+         <li>
+            <a href="#metadata-get_extra">Method <code>get_extra()</code></a>
+         </li>
+         <li>
+            <a href="#metadata-serialization"
+               >Serialization &amp; Deserialization</a
+            >
+         </li>
+         <li><a href="#metadata-default">Default Implementation</a></li>
+      </ul>
+   </li>
+   <li>
+      <a href="#trait-processor">Trait <code>Processor</code></a>
+      <ul>
+         <li><a href="#processor-required-methods">Required Methods</a></li>
+         <li><a href="#processor-provided-methods">Provided Methods</a></li>
+         <li><a href="#processor-implementation">Implementing the Trait</a></li>
+      </ul>
+   </li>
+   <li><a href="#error-handling">Error Handling</a></li>
+   <li><a href="#external-traits-and-types">External Traits &amp; Types</a></li>
+   <li><a href="#examples-from-tests">Examples from Tests</a></li>
+   <li><a href="#validation-rules-summary">Validation Rules Summary</a></li>
+   <li><a href="#testing-suite-overview">Testing Suite Overview</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>
+   <code>librawssg_handler</code> is the core library for a static site
+   generator. It defines the essential data structures used to represent a
+   processed document (<code>Document</code>) and its front matter
+   (<code>Metadata</code>). Additionally, it provides a pluggable
+   <code>Processor</code> trait that allows different file types to be processed
+   into <code>Document</code> instances.
+</p>
+<p>The crate is intended to be used in conjunction with:</p>
+<ul>
+   <li>
+      <code>librawssg_error</code>: Provides the <code>Error</code> and
+      <code>Result</code> types for consistent error handling.
+   </li>
+   <li>
+      <code>librawssg_fs</code>: Defines a <code>FileSystem</code> trait
+      abstracting file I/O operations (used by <code>Processor</code>).
+   </li>
+</ul>
+<hr />
+<h2 id="modules">Modules</h2>
+<p>The library is organized into three public modules:</p>
+<ul>
+   <li>
+      <strong><code>document</code></strong> – Contains the
+      <code>Document</code> struct.
+   </li>
+   <li>
+      <strong><code>metadata</code></strong> – Contains the
+      <code>Metadata</code> struct.
+   </li>
+   <li>
+      <strong><code>processor</code></strong> – Contains the
+      <code>Processor</code> trait.
+   </li>
+</ul>
+<p>All public types are re‑exported at the crate root for convenience:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> document::Document;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> metadata::Metadata;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> processor::Processor;
+</code></pre>
+<hr />
+<h2 id="struct-document-">Struct <code>Document</code></h2>
+<p>
+   Represents a fully processed content item ready for rendering or further
+   processing.
+</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Serialize)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Document</span></span> {
+    <span class="hljs-keyword">pub</span> metadata: Metadata,
+    <span class="hljs-keyword">pub</span> body: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> url: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> output_path: PathBuf,
+    <span class="hljs-keyword">pub</span> source_path: PathBuf,
+    <span class="hljs-keyword">pub</span> depth: <span class="hljs-keyword">usize</span>,
+    <span class="hljs-keyword">pub</span> content_type: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> is_list: <span class="hljs-keyword">bool</span>,
+    <span class="hljs-keyword">pub</span> list_items: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">Vec</span>&lt;<span class="hljs-keyword">Self</span>&gt;&gt;,
+    <span class="hljs-keyword">pub</span> taxonomies: HashMap&lt;<span class="hljs-built_in">String</span>, <span class="hljs-built_in">Vec</span>&lt;<span class="hljs-built_in">String</span>&gt;&gt;,
+}
+</code></pre>
+<h3 id="document-fields">Document Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>metadata</code></td>
+         <td><code>Metadata</code></td>
+         <td>Front matter metadata associated with the document.</td>
+      </tr>
+      <tr>
+         <td><code>body</code></td>
+         <td><code>String</code></td>
+         <td>
+            The processed content body (e.g., rendered HTML, Markdown text,
+            etc.).
+         </td>
+      </tr>
+      <tr>
+         <td><code>url</code></td>
+         <td><code>String</code></td>
+         <td>
+            The relative URL where the document will be accessible (e.g.,
+            <code>&quot;blog/my-post.html&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>output_path</code></td>
+         <td><code>PathBuf</code></td>
+         <td>
+            Filesystem path where the final output file should be written (e.g.,
+            <code>&quot;blog/my-post/index.html&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>source_path</code></td>
+         <td><code>PathBuf</code></td>
+         <td>
+            Path to the original source file (e.g.,
+            <code>&quot;content/blog/my-post.md&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>depth</code></td>
+         <td><code>usize</code></td>
+         <td>
+            Depth of the document in the site hierarchy (0 for top‑level). Used
+            for sorting or navigation.
+         </td>
+      </tr>
+      <tr>
+         <td><code>content_type</code></td>
+         <td><code>String</code></td>
+         <td>
+            Identifier for the kind of content (e.g.,
+            <code>&quot;blog&quot;</code>, <code>&quot;page&quot;</code>,
+            <code>&quot;article&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>is_list</code></td>
+         <td><code>bool</code></td>
+         <td>
+            Indicates whether this document represents a list of other documents
+            (e.g., an index page).
+         </td>
+      </tr>
+      <tr>
+         <td><code>list_items</code></td>
+         <td><code>Option&lt;Vec&lt;Document&gt;&gt;</code></td>
+         <td>
+            If <code>is_list</code> is true, may contain the child documents.
+            <code>None</code> otherwise or when not set.
+         </td>
+      </tr>
+      <tr>
+         <td><code>taxonomies</code></td>
+         <td><code>HashMap&lt;String, Vec&lt;String&gt;&gt;</code></td>
+         <td>
+            A map of taxonomy names (e.g., <code>&quot;categories&quot;</code>,
+            <code>&quot;tags&quot;</code>) to lists of terms.
+         </td>
+      </tr>
+   </tbody>
+</table>
+<blockquote>
+   <p>
+      <strong>Note:</strong> The <code>#[non_exhaustive]</code> attribute means
+      that external crates cannot exhaustively match on <code>Document</code> or
+      construct it with a struct literal; they must use the provided constructor
+      or update syntax. This allows adding fields in the future without breaking
+      downstream code.
+   </p>
+</blockquote>
+<h3 id="document-new">Document::new</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>(
+    metadata: Metadata,
+    body: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    url: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    output_path: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;PathBuf&gt;,
+    source_path: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;PathBuf&gt;,
+    depth: <span class="hljs-keyword">usize</span>,
+    content_type: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    is_list: <span class="hljs-keyword">bool</span>,
+) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-keyword">Self</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a new <code>Document</code> after
+   validating the provided arguments.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>metadata</code>: A fully constructed <code>Metadata</code> instance.
+   </li>
+   <li>
+      <code>body</code>: The content body (accepts any type convertible to
+      <code>String</code>).
+   </li>
+   <li>
+      <code>url</code>: The desired relative URL (must not be empty or
+      whitespace only).
+   </li>
+   <li>
+      <code>output_path</code>: The target output path (must not be empty).
+   </li>
+   <li>
+      <code>source_path</code>: The source file path (must have a file name
+      component).
+   </li>
+   <li><code>depth</code>: The hierarchy depth (must be ≤ 1000).</li>
+   <li>
+      <code>content_type</code>: A string identifying the content type (e.g.,
+      <code>&quot;blog&quot;</code>, <code>&quot;page&quot;</code>).
+   </li>
+   <li>
+      <code>is_list</code>: Boolean indicating whether this document is a list
+      container.
+   </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(Document)</code> on success.</li>
+   <li>
+      <code>Err(librawssg_error::Error::Validation(message))</code> if any
+      validation rule fails.
+   </li>
+</ul>
+<p><strong>Validation Rules</strong>:</p>
+<ol>
+   <li><code>url</code> must not be empty or contain only whitespace.</li>
+   <li><code>output_path</code> must not be empty (as an OS string).</li>
+   <li>
+      <code>source_path</code> must have a file name (i.e., its last component
+      is not <code>..</code> or empty).
+   </li>
+   <li><code>depth</code> must not exceed 1000.</li>
+</ol>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_handler::{Document, Metadata};
+<span class="hljs-keyword">use</span> std::path::PathBuf;
+
+<span class="hljs-keyword">let</span> metadata = Metadata::new(<span class="hljs-string">"My Post"</span>, <span class="hljs-string">"A short description"</span>)?;
+
+<span class="hljs-keyword">let</span> document = Document::new(
+    metadata,
+    <span class="hljs-string">"&lt;h1&gt;Hello&lt;/h1&gt;&lt;p&gt;World&lt;/p&gt;"</span>,
+    <span class="hljs-string">"blog/my-post.html"</span>,
+    <span class="hljs-string">"blog/my-post/index.html"</span>,
+    <span class="hljs-string">"content/blog/my-post.md"</span>,
+    <span class="hljs-number">1</span>,
+    <span class="hljs-string">"blog"</span>,
+    <span class="hljs-literal">false</span>,
+)?;
+</code></pre>
+<hr />
+<h3 id="document-relative_url">Document::relative_url</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">relative_url</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-keyword">str</span>
+</code></pre>
+<p><strong>Purpose</strong>: Returns the relative URL of the document.</p>
+<p>
+   <strong>Returns</strong>: A string slice referencing the
+   <code>url</code> field.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-meta">doc</span> = <span class="hljs-comment">/* ... */</span>;
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(<span class="hljs-meta">doc</span>.relative<span class="hljs-number">_u</span>rl(), <span class="hljs-string">"blog/my-post.html"</span>);
+</code></pre>
+<hr />
+<h3 id="document-add_taxonomy">Document::add_taxonomy</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">add_taxonomy</span></span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, name: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;, items: <span class="hljs-built_in">Vec</span>&lt;<span class="hljs-built_in">String</span>&gt;)
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Inserts or replaces a taxonomy entry in the
+   document’s <code>taxonomies</code> map.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>name</code>: Taxonomy name (converted into <code>String</code>).
+   </li>
+   <li>
+      <code>items</code>: A vector of string terms belonging to that taxonomy.
+   </li>
+</ul>
+<p>
+   <strong>Behavior</strong>: If a taxonomy with the same name already exists,
+   its value is replaced.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> mut <span class="hljs-meta">doc</span> = <span class="hljs-comment">/* ... */</span>;
+<span class="hljs-meta">doc</span>.add<span class="hljs-number">_</span>taxonomy(<span class="hljs-string">"categories"</span>, vec![<span class="hljs-string">"rust"</span>.to<span class="hljs-number">_</span>string(), <span class="hljs-string">"ssg"</span>.to<span class="hljs-number">_</span>string()]);
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(<span class="hljs-meta">doc</span>.taxonomies[<span class="hljs-string">"categories"</span>], vec![<span class="hljs-string">"rust"</span>, <span class="hljs-string">"ssg"</span>]);
+</code></pre>
+<hr />
+<h3 id="document-depth">Document::depth</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">const</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">depth</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-keyword">usize</span>
+</code></pre>
+<p><strong>Purpose</strong>: Returns the <code>depth</code> field.</p>
+<p><strong>Returns</strong>: The document’s depth as a <code>usize</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-meta">doc</span> = <span class="hljs-comment">/* ... */</span>;
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(<span class="hljs-meta">doc</span>.depth(), <span class="hljs-number">1</span>);
+</code></pre>
+<hr />
+<h3 id="document-with_list_items">Document::with_list_items</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">with_list_items</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, items: <span class="hljs-built_in">Vec</span>&lt;<span class="hljs-keyword">Self</span>&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Consumes the document, sets its
+   <code>list_items</code> field to <code>Some(items)</code>, and returns the
+   modified document.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>items</code>: A vector of <code>Document</code> instances that are
+      children of this list document.
+   </li>
+</ul>
+<p>
+   <strong>Returns</strong>: The same document with <code>list_items</code> set.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> parent = Document::<span class="hljs-keyword">new</span>(<span class="hljs-comment">/* ... */</span>)?;
+<span class="hljs-keyword">let</span> child<span class="hljs-number">1</span> = Document::<span class="hljs-keyword">new</span>(<span class="hljs-comment">/* ... */</span>)?;
+<span class="hljs-keyword">let</span> child<span class="hljs-number">2</span> = Document::<span class="hljs-keyword">new</span>(<span class="hljs-comment">/* ... */</span>)?;
+<span class="hljs-keyword">let</span> list<span class="hljs-number">_</span><span class="hljs-meta">doc</span> = parent.with<span class="hljs-number">_</span>list<span class="hljs-number">_</span>items(vec![child<span class="hljs-number">1</span>, child<span class="hljs-number">2</span>]);
+<span class="hljs-keyword">assert</span>!(list<span class="hljs-number">_</span><span class="hljs-meta">doc</span>.list<span class="hljs-number">_</span>items.<span class="hljs-keyword">is</span><span class="hljs-number">_</span>some());
+</code></pre>
+<hr />
+<h2 id="struct-metadata-">Struct <code>Metadata</code></h2>
+<p>
+   Represents front matter (metadata) for a document. The struct is serializable
+   and deserializable, making it suitable for parsing from formats like YAML or
+   TOML front matter.
+</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Metadata</span></span> {
+    <span class="hljs-keyword">pub</span> title: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> description: <span class="hljs-built_in">String</span>,
+    <span class="hljs-keyword">pub</span> author: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-keyword">pub</span> repo_url: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-keyword">pub</span> license: <span class="hljs-built_in">Option</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-keyword">pub</span> date: <span class="hljs-built_in">Option</span>&lt;NaiveDate&gt;,
+    <span class="hljs-keyword">pub</span> updated: <span class="hljs-built_in">Option</span>&lt;NaiveDate&gt;,
+    <span class="hljs-keyword">pub</span> tags: <span class="hljs-built_in">Vec</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    <span class="hljs-keyword">pub</span> draft: <span class="hljs-keyword">bool</span>,
+    <span class="hljs-keyword">pub</span> extra: HashMap&lt;<span class="hljs-built_in">String</span>, serde_json::Value&gt;,
+}
+</code></pre>
+<h3 id="metadata-fields">Metadata Fields</h3>
+<table>
+   <thead>
+      <tr>
+         <th>Field</th>
+         <th>Type</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>title</code></td>
+         <td><code>String</code></td>
+         <td>The document title (required, cannot be empty).</td>
+      </tr>
+      <tr>
+         <td><code>description</code></td>
+         <td><code>String</code></td>
+         <td>A short description of the content.</td>
+      </tr>
+      <tr>
+         <td><code>author</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td>The author’s name, if known.</td>
+      </tr>
+      <tr>
+         <td><code>repo_url</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td>URL to the source repository.</td>
+      </tr>
+      <tr>
+         <td><code>license</code></td>
+         <td><code>Option&lt;String&gt;</code></td>
+         <td>
+            License identifier (e.g., <code>&quot;MIT&quot;</code>,
+            <code>&quot;Apache-2.0&quot;</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>date</code></td>
+         <td><code>Option&lt;NaiveDate&gt;</code></td>
+         <td>
+            Publication date (ISO 8601 date, e.g., <code>2026-09-08</code>).
+         </td>
+      </tr>
+      <tr>
+         <td><code>updated</code></td>
+         <td><code>Option&lt;NaiveDate&gt;</code></td>
+         <td>Last modification date.</td>
+      </tr>
+      <tr>
+         <td><code>tags</code></td>
+         <td><code>Vec&lt;String&gt;</code></td>
+         <td>List of tags (keywords) associated with the content.</td>
+      </tr>
+      <tr>
+         <td><code>draft</code></td>
+         <td><code>bool</code></td>
+         <td>
+            If true, the document is considered a draft and may be excluded from
+            builds.
+         </td>
+      </tr>
+      <tr>
+         <td><code>extra</code></td>
+         <td><code>HashMap&lt;String, serde_json::Value&gt;</code></td>
+         <td>Arbitrary extra key–value pairs for custom metadata.</td>
+      </tr>
+   </tbody>
+</table>
+<blockquote>
+   <p>
+      <strong>Note:</strong> <code>#[non_exhaustive]</code> prevents exhaustive
+      struct literals outside the crate; use the provided constructors or update
+      syntax.
+   </p>
+</blockquote>
+<h3 id="metadata-new">Metadata::new</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>(
+    title: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+    description: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;,
+) -&gt; librawssg_error::<span class="hljs-built_in">Result</span>&lt;<span class="hljs-keyword">Self</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a <code>Metadata</code> instance with a
+   required <code>title</code> and <code>description</code>. All other fields
+   are set to their default values.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>title</code>: The title (must not be empty or whitespace only).
+   </li>
+   <li><code>description</code>: A description string.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(Metadata)</code> on success.</li>
+   <li>
+      <code
+         >Err(librawssg_error::Error::Validation(&quot;metadata title cannot be
+         empty&quot;))</code
+      >
+      if the title is empty or whitespace.
+   </li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_handler::Metadata;
+
+<span class="hljs-keyword">let</span> meta = Metadata::new(<span class="hljs-string">"My Title"</span>, <span class="hljs-string">"My Description"</span>)?;
+<span class="hljs-built_in">assert_eq!</span>(meta.title, <span class="hljs-string">"My Title"</span>);
+<span class="hljs-built_in">assert!</span>(!meta.draft);
+<span class="hljs-built_in">assert!</span>(meta.tags.is_empty());
+</code></pre>
+<hr />
+<h3 id="metadata-is_draft">Metadata::is_draft</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">const</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">is_draft</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-keyword">bool</span>
+</code></pre>
+<p><strong>Purpose</strong>: Returns the <code>draft</code> field.</p>
+<p>
+   <strong>Returns</strong>: <code>true</code> if the document is marked as a
+   draft, otherwise <code>false</code>.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> mut meta = Metadata::<span class="hljs-keyword">new</span>(<span class="hljs-string">"Title"</span>, <span class="hljs-string">"Desc"</span>)?;
+<span class="hljs-keyword">assert</span>!(!meta.<span class="hljs-keyword">is</span><span class="hljs-number">_</span>draft());
+meta.draft = true;
+<span class="hljs-keyword">assert</span>!(meta.<span class="hljs-keyword">is</span><span class="hljs-number">_</span>draft());
+</code></pre>
+<hr />
+<h3 id="metadata-insert_extra">Metadata::insert_extra</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">insert_extra</span></span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, key: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;<span class="hljs-built_in">String</span>&gt;, value: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;serde_json::Value&gt;)
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Inserts or updates an entry in the
+   <code>extra</code> map.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>key</code>: The key (converted to <code>String</code>).</li>
+   <li>
+      <code>value</code>: Any type convertible to
+      <code>serde_json::Value</code> (e.g., strings, numbers, booleans, arrays,
+      objects, or <code>serde_json::json!</code> macro results).
+   </li>
+</ul>
+<p>
+   <strong>Behavior</strong>: If the key already exists, its value is
+   overwritten.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">use serde_json::json;
+
+let mut <span class="hljs-keyword">meta</span> = Metadata::new(<span class="hljs-string">"Title"</span>, <span class="hljs-string">"Desc"</span>)?;
+<span class="hljs-keyword">meta</span>.insert_extra(<span class="hljs-string">"key"</span>, <span class="hljs-string">"value"</span>);
+<span class="hljs-keyword">meta</span>.insert_extra(<span class="hljs-string">"number"</span>, <span class="hljs-number">42</span>);
+<span class="hljs-keyword">meta</span>.insert_extra(<span class="hljs-string">"flag"</span>, <span class="hljs-literal">true</span>);
+<span class="hljs-keyword">meta</span>.insert_extra(<span class="hljs-string">"nested"</span>, json!({<span class="hljs-string">"foo"</span>: <span class="hljs-string">"bar"</span>}));
+</code></pre>
+<hr />
+<h3 id="metadata-get_extra">Metadata::get_extra</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">get_extra</span></span>(&amp;<span class="hljs-keyword">self</span>, key: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Option</span>&lt;&amp;serde_json::Value&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Retrieves a reference to the value stored under
+   <code>key</code> in the <code>extra</code> map.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>key</code>: The key to look up.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Some(&amp;Value)</code> if the key exists.</li>
+   <li><code>None</code> otherwise.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> meta = <span class="hljs-comment">/* ... */</span>;
+<span class="hljs-keyword">if</span> <span class="hljs-keyword">let</span> <span class="hljs-literal">Some</span>(v) = meta.get_extra(<span class="hljs-string">"key"</span>) {
+    <span class="hljs-built_in">assert_eq!</span>(v, &amp;json!(<span class="hljs-string">"value"</span>));
+}
+</code></pre>
+<hr />
+<h3 id="metadata-serialization">Metadata Serialization</h3>
+<p>
+   <code>Metadata</code> derives both <code>Serialize</code> and
+   <code>Deserialize</code>, so it can be converted to/from JSON, YAML, etc.
+   This is particularly useful for reading front matter from source files.
+</p>
+<p><strong>Serialization Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> serde_json;
+
+let meta = <span class="hljs-symbol">Metadata:</span><span class="hljs-symbol">:new</span>(<span class="hljs-string">"Hello"</span>, <span class="hljs-string">"World"</span>)?;
+let json_str = <span class="hljs-symbol">serde_json:</span><span class="hljs-symbol">:to_string</span>(&amp;meta)?;
+<span class="hljs-regexp">//</span> {<span class="hljs-string">"title"</span><span class="hljs-symbol">:<span class="hljs-string">"Hello"</span></span>,<span class="hljs-string">"description"</span><span class="hljs-symbol">:<span class="hljs-string">"World"</span></span>,<span class="hljs-string">"author"</span><span class="hljs-symbol">:null</span>,...}
+</code></pre>
+<p><strong>Deserialization Example</strong>:</p>
+<pre><code class="lang-rust">let json_str = r#<span class="hljs-string">"{
+    "</span>title<span class="hljs-string">": "</span>Hello<span class="hljs-string">",
+    "d</span>escription<span class="hljs-string">": "</span>World<span class="hljs-string">",
+    "</span>autho<span class="hljs-string">r": "</span>Alice<span class="hljs-string">",
+    "d</span>ate<span class="hljs-string">": "</span><span class="hljs-number">2026</span>-<span class="hljs-number">0</span>9-<span class="hljs-number">0</span>8<span class="hljs-string">",
+    "</span>tags<span class="hljs-string">": ["</span>rust<span class="hljs-string">", "</span>ssg<span class="hljs-string">"],
+    "d</span>raft<span class="hljs-string">": false,
+    "</span>extra<span class="hljs-string">": {"</span>foo<span class="hljs-string">": "</span>ba<span class="hljs-string">r"}
+}"</span>#;
+
+let meta: Metadata = serde_json::from_str(json_str)?;
+assert_eq!(meta.author.as_deref(), Some(<span class="hljs-string">"Alice"</span>));
+</code></pre>
+<hr />
+<h3 id="metadata-default">Metadata Default</h3>
+<p>
+   The <code>Default</code> trait is implemented. All fields are set to sensible
+   empty values:
+</p>
+<ul>
+   <li><code>title</code>: empty string</li>
+   <li><code>description</code>: empty string</li>
+   <li>
+      <code>author</code>, <code>repo_url</code>, <code>license</code>,
+      <code>date</code>, <code>updated</code>: <code>None</code>
+   </li>
+   <li><code>tags</code>: empty vector</li>
+   <li><code>draft</code>: <code>false</code></li>
+   <li><code>extra</code>: empty <code>HashMap</code></li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> meta = Metadata::<span class="hljs-keyword">default</span>();
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(meta.title, <span class="hljs-string">""</span>);
+<span class="hljs-keyword">assert</span>!(!meta.draft);
+<span class="hljs-keyword">assert</span>!(meta.tags.<span class="hljs-keyword">is</span><span class="hljs-number">_</span>empty());
+</code></pre>
+<hr />
+<h2 id="trait-processor-">Trait <code>Processor</code></h2>
+<p>
+   The <code>Processor</code> trait defines an interface for components that can
+   transform a source file into a <code>Document</code>. Multiple processors may
+   be registered and invoked based on their ability to handle a given file.
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">Processor</span></span>: <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span> {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">name</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-keyword">str</span>;
+
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">priority</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-keyword">i32</span> {
+        <span class="hljs-number">0</span>
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, relative_path: &amp;Path, original_path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span>;
+
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">process</span></span>(
+        &amp;<span class="hljs-keyword">self</span>,
+        fs: &amp;dyn FileSystem,
+        relative_path: &amp;Path,
+        content_dir: &amp;Path,
+    ) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Option</span>&lt;Document&gt;&gt;;
+}
+</code></pre>
+<h3 id="processor-required-methods">Processor Required Methods</h3>
+<h4 id="-name-"><code>name()</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">name</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-keyword">str</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Returns a human‑readable identifier for the
+   processor (e.g., <code>&quot;markdown&quot;</code>,
+   <code>&quot;sass&quot;</code>).
+</p>
+<h4 id="-can_process-"><code>can_process()</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, relative_path: &amp;Path, original_path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Determines whether this processor should handle the
+   given file.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>relative_path</code>: The path of the file relative to the content
+      directory.
+   </li>
+   <li>
+      <code>original_path</code>: The full original path (often the same as
+      <code>content_dir.join(relative_path)</code>).
+   </li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>true</code> if the processor can process this
+   file; <code>false</code> otherwise.
+</p>
+<p>
+   <strong>Typical Implementation</strong>: Check file extension or other
+   attributes.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, relative_path: &amp;Path, _original_path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span> {
+    relative_path.extension().and_then(|e| e.to_str()) == <span class="hljs-literal">Some</span>(<span class="hljs-string">"md"</span>)
+}
+</code></pre>
+<h4 id="-process-"><code>process()</code></h4>
+<pre><code class="lang-rust">fn process(
+    <span class="hljs-variable">&amp;self</span>,
+<span class="hljs-symbol">    fs:</span> <span class="hljs-variable">&amp;dyn</span> FileSystem,
+<span class="hljs-symbol">    relative_path:</span> &amp;Path,
+<span class="hljs-symbol">    content_dir:</span> &amp;Path,
+) -&gt; Result<span class="hljs-params">&lt;Option&lt;Document&gt;</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Reads the source file, processes it, and returns an
+   optional <code>Document</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>fs</code>: A reference to a <code>FileSystem</code> implementation
+      for performing I/O operations.
+   </li>
+   <li>
+      <code>relative_path</code>: Path of the source file relative to the
+      content directory.
+   </li>
+   <li>
+      <code>content_dir</code>: The root directory containing all source
+      content.
+   </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li>
+      <code>Ok(Some(document))</code> if processing succeeded and produced a
+      document.
+   </li>
+   <li>
+      <code>Ok(None)</code> if the processor decides not to produce a document
+      (e.g., the file is ignored).
+   </li>
+   <li>
+      <code>Err(librawssg_error::Error)</code> if an error occurred during
+      processing.
+   </li>
+</ul>
+<p>
+   <strong>Note</strong>: The <code>FileSystem</code> trait is defined in the
+   <code>librawssg_fs</code> crate. It abstracts many common file operations,
+   allowing processors to be tested with mock filesystems.
+</p>
+<hr />
+<h3 id="processor-provided-methods">Processor Provided Methods</h3>
+<h4 id="-priority-"><code>priority()</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">priority</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-keyword">i32</span> {
+    <span class="hljs-number">0</span>
+}
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Returns the priority of this processor. Processors
+   with higher priority are invoked before those with lower priority. The
+   default is <code>0</code>.
+</p>
+<p>
+   <strong>Usage</strong>: Allows ordering of processors when multiple might
+   handle the same file.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">priority</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-keyword">i32</span> {
+    <span class="hljs-number">10</span>
+}
+</code></pre>
+<hr />
+<h3 id="processor-implementation">Processor Implementation</h3>
+<p>
+   To create a custom processor, implement the <code>Processor</code> trait.
+   Below is a complete example based on the test suite:
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_error::<span class="hljs-built_in">Result</span>;
+<span class="hljs-keyword">use</span> librawssg_fs::FileSystem;
+<span class="hljs-keyword">use</span> librawssg_handler::{Document, Metadata, Processor};
+<span class="hljs-keyword">use</span> std::path::Path;
+
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">MarkdownProcessor</span></span>;
+
+<span class="hljs-keyword">impl</span> Processor <span class="hljs-keyword">for</span> MarkdownProcessor {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">name</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-keyword">str</span> {
+        <span class="hljs-string">"markdown"</span>
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, relative_path: &amp;Path, _original_path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span> {
+        relative_path.extension().and_then(|e| e.to_str()) == <span class="hljs-literal">Some</span>(<span class="hljs-string">"md"</span>)
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">process</span></span>(
+        &amp;<span class="hljs-keyword">self</span>,
+        fs: &amp;dyn FileSystem,
+        relative_path: &amp;Path,
+        content_dir: &amp;Path,
+    ) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Option</span>&lt;Document&gt;&gt; {
+        <span class="hljs-comment">// Read the source file</span>
+        <span class="hljs-keyword">let</span> source_path = content_dir.join(relative_path);
+        <span class="hljs-keyword">let</span> content = fs.read_to_string(&amp;source_path)?;
+
+        <span class="hljs-comment">// Parse front matter and body (simplified here)</span>
+        <span class="hljs-keyword">let</span> metadata = Metadata::new(<span class="hljs-string">"Untitled"</span>, <span class="hljs-string">""</span>)?;
+        <span class="hljs-keyword">let</span> body = content; <span class="hljs-comment">// In reality, you would render Markdown to HTML</span>
+
+        <span class="hljs-comment">// Construct Document</span>
+        <span class="hljs-keyword">let</span> doc = Document::new(
+            metadata,
+            body,
+            relative_path.with_extension(<span class="hljs-string">"html"</span>).to_string_lossy().to_string(),
+            relative_path.with_extension(<span class="hljs-string">"index.html"</span>).to_string_lossy().into(),
+            source_path,
+            <span class="hljs-number">1</span>,
+            <span class="hljs-string">"page"</span>,
+            <span class="hljs-literal">false</span>,
+        )?;
+
+        <span class="hljs-literal">Ok</span>(<span class="hljs-literal">Some</span>(doc))
+    }
+}
+</code></pre>
+<hr />
+<h2 id="error-handling">Error Handling</h2>
+<p>
+   The library uses the <code>librawssg_error::Error</code> enum for all
+   fallible operations. Relevant variants:
+</p>
+<ul>
+   <li>
+      <code>Error::Validation(String)</code> – Used when a validation rule fails
+      (e.g., empty URL, invalid depth).
+   </li>
+   <li>
+      <code>Error::Processor(String)</code> – Used by processors to signal
+      processing errors.
+   </li>
+   <li>Other variants may exist but are not directly used in this crate.</li>
+</ul>
+<p>
+   The return type <code>Result&lt;T&gt;</code> is an alias for
+   <code>std::result::Result&lt;T, librawssg_error::Error&gt;</code>.
+</p>
+<p><strong>Example of Validation Error</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> result = Document::new(meta, <span class="hljs-string">"body"</span>, <span class="hljs-string">""</span>, <span class="hljs-string">"out"</span>, <span class="hljs-string">"src.md"</span>, <span class="hljs-number">0</span>, <span class="hljs-string">"page"</span>, <span class="hljs-literal">false</span>);
+<span class="hljs-built_in">assert!</span>(matches!(
+    result,
+    <span class="hljs-literal">Err</span>(librawssg_error::Error::Validation(<span class="hljs-keyword">ref</span> msg)) <span class="hljs-keyword">if</span> msg == <span class="hljs-string">"document url cannot be empty"</span>
+));
+</code></pre>
+<hr />
+<h2 id="external-traits-types">External Traits &amp; Types</h2>
+<h3 id="-filesystem-trait"><code>FileSystem</code> Trait</h3>
+<p>
+   The <code>Processor::process</code> method takes a
+   <code>&amp;dyn FileSystem</code>. This trait is defined in
+   <code>librawssg_fs</code> and provides a comprehensive set of file operations
+   (read, write, create directories, walk, etc.). A typical implementation wraps
+   <code>std::fs</code>, but for testing, mock implementations are often used.
+</p>
+<p>
+   A minimal <code>FileSystem</code> implementation (used in tests) might
+   implement all methods returning
+   <code>io::Error::other(&quot;not implemented&quot;)</code> for those not
+   needed.
+</p>
+<hr />
+<h2 id="examples-from-tests">Examples from Tests</h2>
+<p>
+   The test suite contains numerous examples that demonstrate correct usage and
+   error conditions. Below are selected examples.
+</p>
+<h3 id="creating-a-valid-document">Creating a Valid Document</h3>
+<pre><code class="lang-rust">use librawssg<span class="hljs-number">_</span>handler::{Document, Metadata};
+
+<span class="hljs-keyword">let</span> metadata = Metadata::<span class="hljs-keyword">new</span>(<span class="hljs-string">"Title"</span>, <span class="hljs-string">"Description"</span>)?;
+<span class="hljs-keyword">let</span> <span class="hljs-meta">doc</span> = Document::<span class="hljs-keyword">new</span>(
+    metadata,
+    <span class="hljs-string">"&lt;p&gt;Body&lt;/p&gt;"</span>,
+    <span class="hljs-string">"blog/my-post.html"</span>,
+    <span class="hljs-string">"blog/my-post/index.html"</span>,
+    <span class="hljs-string">"content/blog/my-post.md"</span>,
+    <span class="hljs-number">1</span>,
+    <span class="hljs-string">"blog"</span>,
+    false,
+)?;
+
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(<span class="hljs-meta">doc</span>.metadata.title, <span class="hljs-string">"Title"</span>);
+<span class="hljs-keyword">assert</span><span class="hljs-number">_</span>eq!(<span class="hljs-meta">doc</span>.body, <span class="hljs-string">"&lt;p&gt;Body&lt;/p&gt;"</span>);
+</code></pre>
+<h3 id="handling-invalid-url">Handling Invalid URL</h3>
+<pre><code class="lang-rust">let result = Document::<span class="hljs-keyword">new</span>(
+    Metadata::<span class="hljs-keyword">new</span>(<span class="hljs-string">"Title"</span>, <span class="hljs-string">"Desc"</span>)?,
+    <span class="hljs-string">"body"</span>,
+    <span class="hljs-string">""</span>, // empty URL
+    <span class="hljs-string">"out"</span>,
+    <span class="hljs-string">"src.md"</span>,
+    0,
+    <span class="hljs-string">"page"</span>,
+    <span class="hljs-keyword">false</span>,
+);
+<span class="hljs-keyword">assert</span>!(result.is_err());
+</code></pre>
+<h3 id="adding-taxonomy-terms">Adding Taxonomy Terms</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> mut <span class="hljs-meta">doc</span> = <span class="hljs-comment">/* ... */</span>;
+<span class="hljs-meta">doc</span>.add<span class="hljs-number">_</span>taxonomy(<span class="hljs-string">"categories"</span>, vec![<span class="hljs-string">"rust"</span>.to<span class="hljs-number">_</span>string(), <span class="hljs-string">"ssg"</span>.to<span class="hljs-number">_</span>string()]);
+</code></pre>
+<h3 id="working-with-extra-metadata">
+   Working with <code>extra</code> Metadata
+</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> serde_json::json;
+
+<span class="hljs-keyword">let</span> <span class="hljs-keyword">mut</span> meta = Metadata::new(<span class="hljs-string">"Title"</span>, <span class="hljs-string">"Desc"</span>)?;
+meta.insert_extra(<span class="hljs-string">"key"</span>, <span class="hljs-string">"value"</span>);
+<span class="hljs-keyword">if</span> <span class="hljs-keyword">let</span> <span class="hljs-literal">Some</span>(v) = meta.get_extra(<span class="hljs-string">"key"</span>) {
+    <span class="hljs-built_in">assert_eq!</span>(v, &amp;json!(<span class="hljs-string">"value"</span>));
+}
+</code></pre>
+<h3 id="processor-mock-example">Processor Mock Example</h3>
+<pre><code class="lang-rust"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">MockProcessor</span></span> { <span class="hljs-comment">/* ... */</span> }
+
+<span class="hljs-keyword">impl</span> Processor <span class="hljs-keyword">for</span> MockProcessor {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">name</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-keyword">str</span> { <span class="hljs-string">"mock"</span> }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, _: &amp;Path, _: &amp;Path) -&gt; <span class="hljs-keyword">bool</span> { <span class="hljs-literal">true</span> }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">process</span></span>(&amp;<span class="hljs-keyword">self</span>, _fs: &amp;dyn FileSystem, _rel: &amp;Path, _cd: &amp;Path) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Option</span>&lt;Document&gt;&gt; {
+        <span class="hljs-literal">Ok</span>(<span class="hljs-literal">Some</span>(document))
+    }
+}
+</code></pre>
+<hr />
+<h2 id="validation-rules-summary">Validation Rules Summary</h2>
+<h3 id="-metadata-new-"><code>Metadata::new</code></h3>
+<ul>
+   <li><code>title</code> must not be empty or contain only whitespace.</li>
+</ul>
+<h3 id="-document-new-"><code>Document::new</code></h3>
+<ol>
+   <li><code>url</code> must not be empty or contain only whitespace.</li>
+   <li><code>output_path</code> must not be empty (as an OS string).</li>
+   <li><code>source_path</code> must have a file name component.</li>
+   <li><code>depth</code> must be ≤ 1000.</li>
+</ol>
+<p>Any violation results in an <code>Err(Error::Validation(...))</code>.</p>
+<hr />
+<h2 id="testing-suite-overview">Testing Suite Overview</h2>
+<p>The tests are organized into four files:</p>
+<ol>
+   <li>
+      <strong><code>document_tests.rs</code></strong> – Validates
+      <code>Document</code> construction, field defaults, error cases, and
+      methods (<code>relative_url</code>, <code>add_taxonomy</code>,
+      <code>depth</code>, <code>with_list_items</code>).
+   </li>
+   <li>
+      <strong><code>metadata_tests.rs</code></strong> – Tests
+      <code>Metadata</code> creation, validation, <code>is_draft</code>,
+      <code>insert_extra</code>/<code>get_extra</code>, default values, and JSON
+      serialization/deserialization round‑trip.
+   </li>
+   <li>
+      <strong><code>processor_tests.rs</code></strong> – Tests the
+      <code>Processor</code> trait using mock implementations:
+      <code>name</code>, <code>priority</code>, <code>can_process</code>,
+      <code>process</code> returning <code>Some</code>, <code>None</code>, and
+      error.
+   </li>
+   <li>
+      <strong><code>unit_tests.rs</code></strong> – Verifies that all public
+      items are re‑exported at the crate root.
+   </li>
+</ol>
+<p>All tests can serve as executable examples of the API usage.</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>
+   This documentation covers the public API of <code>librawssg_handler</code> in
+   detail. The crate provides a flexible foundation for building static site
+   generators by separating metadata handling (<code>Metadata</code>), document
+   representation (<code>Document</code>), and pluggable processing logic
+   (<code>Processor</code>). The validation rules ensure data integrity, and the
+   use of traits like <code>FileSystem</code> enables testability.
+</p>
+<p>
+   For further details, refer to the source code and the accompanying test
+   suite.
+</p>

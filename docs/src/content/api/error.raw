@@ -1,0 +1,893 @@
+<h1 id="librawssg_error">librawssg_error</h1>
+<p>
+   <strong>Version</strong>: 1.0.0 (implied)<br /><strong>Crate name</strong>:
+   <code>librawssg_error</code><br /><strong>Description</strong>: Defines a
+   comprehensive error enum and <code>Result</code> alias for use across the
+   <code>librawssg</code> static site generator ecosystem. The error type is
+   built with <code>thiserror</code> for ergonomic <code>Display</code> and
+   <code>Error</code> implementations, supports source chaining, and is designed
+   to cover all common failure modes in SSG operations.
+</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+   <li><a href="#overview">Overview</a></li>
+   <li><a href="#dependencies">Dependencies</a></li>
+   <li>
+      <a href="#the-error-enum">The <code>Error</code> Enum</a>
+      <ul>
+         <li><a href="#enum-definition">Enum Definition</a></li>
+         <li><a href="#attributes-and-derives">Attributes and Derives</a></li>
+         <li><a href="#non-exhaustive">Non‑Exhaustive</a></li>
+      </ul>
+   </li>
+   <li>
+      <a href="#variants">Variants</a>
+      <ul>
+         <li>
+            <a href="#io"><code>Io</code></a>
+         </li>
+         <li>
+            <a href="#config"><code>Config</code></a>
+         </li>
+         <li>
+            <a href="#metadata"><code>Metadata</code></a>
+         </li>
+         <li>
+            <a href="#render"><code>Render</code></a>
+         </li>
+         <li>
+            <a href="#processor"><code>Processor</code></a>
+         </li>
+         <li>
+            <a href="#generator"><code>Generator</code></a>
+         </li>
+         <li>
+            <a href="#pathtraversal"><code>PathTraversal</code></a>
+         </li>
+         <li>
+            <a href="#missingconfig"><code>MissingConfig</code></a>
+         </li>
+         <li>
+            <a href="#generation"><code>Generation</code></a>
+         </li>
+         <li>
+            <a href="#notfound"><code>NotFound</code></a>
+         </li>
+         <li>
+            <a href="#serialization"><code>Serialization</code></a>
+         </li>
+         <li>
+            <a href="#validation"><code>Validation</code></a>
+         </li>
+         <li>
+            <a href="#duplicate"><code>Duplicate</code></a>
+         </li>
+         <li>
+            <a href="#invalidstate"><code>InvalidState</code></a>
+         </li>
+         <li>
+            <a href="#internal"><code>Internal</code></a>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#resultt-type-alias"><code>Result&lt;T&gt;</code> Type Alias</a>
+   </li>
+   <li>
+      <a href="#error-sources-and-stderroerror"
+         >Error Sources and <code>std::error::Error</code></a
+      >
+   </li>
+   <li>
+      <a href="#conversion-from-stdioerror"
+         >Conversion from <code>std::io::Error</code></a
+      >
+   </li>
+   <li>
+      <a href="#usage-examples-from-tests">Usage Examples from Tests</a>
+      <ul>
+         <li><a href="#display-messages">Display Messages</a></li>
+         <li>
+            <a href="#using-the--operator">Using the <code>?</code> Operator</a>
+         </li>
+         <li><a href="#source-chain">Source Chain</a></li>
+         <li><a href="#property-tests">Property Tests</a></li>
+      </ul>
+   </li>
+   <li><a href="#guidelines-for-error-usage">Guidelines for Error Usage</a></li>
+   <li><a href="#testing-suite-overview">Testing Suite Overview</a></li>
+   <li><a href="#conclusion">Conclusion</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>
+   The <code>librawssg_error</code> crate provides a single, unified error type
+   for the entire static site generator ecosystem. Instead of having each module
+   define its own error types, they all share this <code>Error</code> enum,
+   which categorizes failures into well‑defined variants. The enum is derived
+   with <code>thiserror::Error</code>, giving each variant an automatic
+   <code>Display</code> implementation based on a custom message pattern, and an
+   automatic <code>std::error::Error</code> implementation that preserves source
+   chains when applicable.
+</p>
+<p>
+   The crate also exports a <code>Result&lt;T&gt;</code> type alias, simplifying
+   function signatures throughout the codebase.
+</p>
+<p>Key features:</p>
+<ul>
+   <li>
+      <strong>Rich error categories</strong> – 15 distinct variants covering
+      I/O, configuration, parsing, rendering, processing, generation, security,
+      and internal errors.
+   </li>
+   <li>
+      <strong>Source chaining</strong> – The <code>Metadata</code> variant can
+      wrap an underlying error (e.g., a YAML parsing error) and expose it via
+      <code>source()</code>.
+   </li>
+   <li>
+      <strong>Convenient conversion</strong> –
+      <code>From&lt;std::io::Error&gt;</code> allows using the
+      <code>?</code> operator directly in functions returning
+      <code>Result&lt;T, Error&gt;</code>.
+   </li>
+   <li>
+      <strong>Non‑exhaustive</strong> – The enum is marked
+      <code>#[non_exhaustive]</code>, enabling future additions without breaking
+      downstream code.
+   </li>
+</ul>
+<hr />
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+   <li>
+      <code>thiserror</code> – Provides the <code>#[derive(Error)]</code> macro
+      that generates <code>Display</code> and <code>Error</code> implementations
+      from the attributes.
+   </li>
+   <li>
+      <code>core::error::Error</code> (or <code>std::error::Error</code>) – Used
+      as a trait object for the <code>source</code> field in the
+      <code>Metadata</code> variant.
+   </li>
+</ul>
+<p>No other external crates are required.</p>
+<hr />
+<h2 id="the-error-enum">The <code>Error</code> Enum</h2>
+<h3 id="enum-definition">Enum Definition</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> core::error::Error <span class="hljs-keyword">as</span> CoreError;
+<span class="hljs-keyword">use</span> std::path::PathBuf;
+<span class="hljs-keyword">use</span> thiserror::Error;
+
+<span class="hljs-meta">#[derive(Debug, Error)]</span>
+<span class="hljs-meta">#[non_exhaustive]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">enum</span> <span class="hljs-title">Error</span></span> {
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"I/O error: {0}"</span>)]</span>
+    Io(<span class="hljs-meta">#[from]</span> std::io::Error),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Configuration error: {0}"</span>)]</span>
+    Config(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Failed to parse metadata in {path}"</span>)]</span>
+    Metadata {
+        path: PathBuf,
+        <span class="hljs-meta">#[source]</span>
+        source: <span class="hljs-built_in">Box</span>&lt;dyn CoreError + <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span>&gt;,
+    },
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Template rendering error: {0}"</span>)]</span>
+    Render(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Content processor error: {0}"</span>)]</span>
+    Processor(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Generator error: {0}"</span>)]</span>
+    Generator(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Path traversal attempt detected: {0}"</span>)]</span>
+    PathTraversal(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Missing configuration key: {0}"</span>)]</span>
+    MissingConfig(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Site generation error: {0}"</span>)]</span>
+    Generation(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Resource not found: {0}"</span>)]</span>
+    NotFound(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Serialization error: {0}"</span>)]</span>
+    Serialization(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Validation error: {0}"</span>)]</span>
+    Validation(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Duplicate value: {0}"</span>)]</span>
+    Duplicate(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Invalid state: {0}"</span>)]</span>
+    InvalidState(<span class="hljs-built_in">String</span>),
+
+    <span class="hljs-meta">#[error(<span class="hljs-meta-string">"Internal error: {0}"</span>)]</span>
+    Internal(<span class="hljs-built_in">String</span>),
+}
+</code></pre>
+<h3 id="attributes-and-derives">Attributes and Derives</h3>
+<ul>
+   <li>
+      <strong><code>#[derive(Debug, Error)]</code></strong> – Derives
+      <code>Debug</code> and <code>std::error::Error</code>. The
+      <code>Error</code> derive from <code>thiserror</code> also generates a
+      <code>Display</code> implementation based on the
+      <code>#[error(&quot;...&quot;)]</code> attributes.
+   </li>
+   <li>
+      <strong><code>#[non_exhaustive]</code></strong> – Indicates that the enum
+      may gain new variants in future releases. Downstream crates must not
+      exhaustively match on this enum; they must include a wildcard arm
+      (<code>_</code>) when matching.
+   </li>
+</ul>
+<h3 id="non-exhaustive">Non‑Exhaustive</h3>
+<p>Because the enum is non‑exhaustive, external code cannot write:</p>
+<pre><code class="lang-rust"><span class="hljs-selector-tag">match</span> <span class="hljs-selector-tag">err</span> {
+    <span class="hljs-attribute">Error</span>::<span class="hljs-built_in">Io</span>(_) =&gt; ...,
+    Error::<span class="hljs-built_in">Config</span>(_) =&gt; ...,
+    // all variants...
+}
+</code></pre>
+<p>without including a catch‑all arm:</p>
+<pre><code class="lang-rust"><span class="hljs-selector-tag">match</span> <span class="hljs-selector-tag">err</span> {
+    <span class="hljs-attribute">Error</span>::<span class="hljs-built_in">Io</span>(_) =&gt; ...,
+    Error::<span class="hljs-built_in">Config</span>(_) =&gt; ...,
+    // ...
+    _ =&gt; { <span class="hljs-comment">/* handle unknown future variants */</span> }
+}
+</code></pre>
+<p>This ensures forward compatibility.</p>
+<hr />
+<h2 id="variants">Variants</h2>
+<h3 id="-io-"><code>Io</code></h3>
+<pre><code class="lang-rust">#[error(<span class="hljs-string">"I/O error: {0}"</span>)]
+Io(#[<span class="hljs-keyword">from</span>] std::io::Error),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Wraps a standard library I/O error. Used for
+      any filesystem operation failure (reading, writing, deleting, etc.).
+   </li>
+   <li>
+      <strong>Fields</strong>: Contains a single <code>std::io::Error</code>.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;I/O error: {underlying_io_error_message}&quot;</code>.
+   </li>
+   <li>
+      <strong><code>#[from]</code></strong
+      >: Automatically provides
+      <code>From&lt;std::io::Error&gt; for Error</code>, allowing the
+      <code>?</code> operator in functions returning
+      <code>Result&lt;T, Error&gt;</code>.
+   </li>
+   <li>
+      <strong>Source</strong>: <code>source()</code> returns
+      <code>Some(&amp;io_error)</code> because
+      <code>std::io::Error</code> implements <code>std::error::Error</code>.
+   </li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> io_err = std::io::Error::new(std::io::ErrorKind::NotFound, <span class="hljs-string">"file missing"</span>);
+<span class="hljs-keyword">let</span> err = Error::Io(io_err);
+<span class="hljs-built_in">assert_eq!</span>(err.to_string(), <span class="hljs-string">"I/O error: file missing"</span>);
+</code></pre>
+<hr />
+<h3 id="-config-"><code>Config</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Configuration <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Config(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Indicates a problem with configuration data
+      (e.g., invalid YAML, malformed settings).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> containing a human‑readable
+      description.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Configuration error: {message}&quot;</code>.
+   </li>
+   <li>
+      <strong>Source</strong>: <code>None</code> (no underlying error is
+      stored).
+   </li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Config(<span class="hljs-string">"invalid YAML"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Configuration error: invalid YAML"</span>);
+</code></pre>
+<hr />
+<h3 id="-metadata-"><code>Metadata</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[error(<span class="hljs-string">"Failed to parse metadata in {path}"</span>)]</span>
+<span class="hljs-class">Metadata </span>{
+<span class="hljs-symbol">    path:</span> PathBuf,
+    <span class="hljs-meta">#[source]</span>
+<span class="hljs-symbol">    source:</span> Box<span class="hljs-params">&lt;dyn CoreError + Send + Sync&gt;</span>,
+},
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Used when parsing metadata (e.g., front
+      matter) fails. Stores the path of the problematic file and the original
+      error.
+   </li>
+   <li>
+      <strong>Fields</strong>:
+      <ul>
+         <li>
+            <code>path: PathBuf</code> – The path to the source file where
+            metadata parsing failed.
+         </li>
+         <li>
+            <code>source: Box&lt;dyn CoreError + Send + Sync&gt;</code> – The
+            underlying error that caused the failure (boxed trait object).
+         </li>
+      </ul>
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Failed to parse metadata in {path}&quot;</code>. The
+      <code>{path}</code> placeholder prints the <code>PathBuf</code> using its
+      <code>Display</code> implementation.
+   </li>
+   <li>
+      <strong>Source</strong>: <code>source()</code> returns
+      <code>Some(&amp;*source)</code> (the boxed error as a
+      <code>&amp;dyn Error</code>), enabling error chain inspection.
+   </li>
+   <li>
+      <strong>Note</strong>: The <code>#[source]</code> attribute tells
+      <code>thiserror</code> to use this field as the error source. The
+      <code>Box&lt;dyn CoreError + Send + Sync&gt;</code> allows storing any
+      error type that is <code>Send + Sync</code>.
+   </li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> std::path::PathBuf;
+
+<span class="hljs-keyword">let</span> source: <span class="hljs-built_in">Box</span>&lt;dyn core::error::Error + <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span>&gt; =
+    <span class="hljs-built_in">Box</span>::new(std::io::Error::other(<span class="hljs-string">"bad yaml"</span>));
+<span class="hljs-keyword">let</span> err = Error::Metadata {
+    path: PathBuf::from(<span class="hljs-string">"content/post.md"</span>),
+    source,
+};
+
+<span class="hljs-built_in">assert_eq!</span>(err.to_string(), <span class="hljs-string">"Failed to parse metadata in content/post.md"</span>);
+<span class="hljs-keyword">let</span> as_core_error: &amp;dyn core::error::Error = &amp;err;
+<span class="hljs-keyword">let</span> source_ref = as_core_error.source().unwrap();
+<span class="hljs-built_in">assert_eq!</span>(source_ref.to_string(), <span class="hljs-string">"bad yaml"</span>);
+</code></pre>
+<hr />
+<h3 id="-render-"><code>Render</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Template rendering <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Render(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Signifies an error during template rendering
+      (e.g., missing variable, template not found, syntax error).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> describing the rendering
+      problem.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Template rendering error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Render(<span class="hljs-string">"template not found"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Template rendering error: template not found"</span>);
+</code></pre>
+<hr />
+<h3 id="-processor-"><code>Processor</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Content processor <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Processor(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Used when a content processor (e.g.,
+      Markdown parser, Sass compiler) fails.
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> with details about the
+      processor failure.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Content processor error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Processor(<span class="hljs-string">"custom processor failed"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Content processor error: custom processor failed"</span>);
+</code></pre>
+<hr />
+<h3 id="-generator-"><code>Generator</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Generator <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Generator(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Represents an error in a generator component
+      (e.g., RSS feed generation, sitemap creation).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> describing the generator
+      error.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Generator error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Generator(<span class="hljs-string">"RSS generation failed"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Generator error: RSS generation failed"</span>);
+</code></pre>
+<hr />
+<h3 id="-pathtraversal-"><code>PathTraversal</code></h3>
+<pre><code class="lang-rust">#[error(<span class="hljs-string">"Path traversal attempt detected: {0}"</span>)]
+<span class="hljs-function"><span class="hljs-title">PathTraversal</span><span class="hljs-params">(String)</span></span>,
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Indicates a path traversal attack was
+      attempted or a path escapes a safe root directory.
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> containing the offending
+      path or description.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Path traversal attempt detected: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::PathTraversal(<span class="hljs-string">"../escape"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Path traversal attempt detected: ../escape"</span>);
+</code></pre>
+<hr />
+<h3 id="-missingconfig-"><code>MissingConfig</code></h3>
+<pre><code class="lang-rust">#[error(<span class="hljs-string">"Missing configuration key: {0}"</span>)]
+<span class="hljs-function"><span class="hljs-title">MissingConfig</span><span class="hljs-params">(String)</span></span>,
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Signals that a required configuration key is
+      absent.
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> naming the missing key.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Missing configuration key: {key}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::MissingConfig(<span class="hljs-string">"base_url"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Missing configuration key: base_url"</span>);
+</code></pre>
+<hr />
+<h3 id="-generation-"><code>Generation</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Site generation <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Generation(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: A general error during the site generation
+      phase (e.g., failed to write output).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> with more information.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Site generation error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Generation(<span class="hljs-string">"output write failed"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Site generation error: output write failed"</span>);
+</code></pre>
+<hr />
+<h3 id="-notfound-"><code>NotFound</code></h3>
+<pre><code class="lang-rust">#[error(<span class="hljs-string">"Resource not found: {0}"</span>)]
+<span class="hljs-function"><span class="hljs-title">NotFound</span><span class="hljs-params">(String)</span></span>,
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Used when a requested resource (file, asset,
+      page) cannot be found.
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> identifying the missing
+      resource.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Resource not found: {resource}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::NotFound(<span class="hljs-string">"asset.css"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Resource not found: asset.css"</span>);
+</code></pre>
+<hr />
+<h3 id="-serialization-"><code>Serialization</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Serialization <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Serialization(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Indicates a failure during serialization or
+      deserialization (e.g., JSON conversion error).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> describing the
+      serialization problem.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Serialization error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Serialization(<span class="hljs-string">"invalid JSON"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Serialization error: invalid JSON"</span>);
+</code></pre>
+<hr />
+<h3 id="-validation-"><code>Validation</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Validation <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Validation(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Represents a validation failure (e.g.,
+      invalid input, constraint violation).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> explaining what failed
+      validation.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Validation error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Validation(<span class="hljs-string">"name too long"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Validation error: name too long"</span>);
+</code></pre>
+<hr />
+<h3 id="-duplicate-"><code>Duplicate</code></h3>
+<pre><code class="lang-rust">#[error(<span class="hljs-string">"Duplicate value: {0}"</span>)]
+<span class="hljs-function"><span class="hljs-title">Duplicate</span><span class="hljs-params">(String)</span></span>,
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Signals that a duplicate value was
+      encountered where uniqueness was expected (e.g., duplicate key in a map).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> identifying the duplicated
+      item.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Duplicate value: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Duplicate(<span class="hljs-string">"duplicate key"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Duplicate value: duplicate key"</span>);
+</code></pre>
+<hr />
+<h3 id="-invalidstate-"><code>InvalidState</code></h3>
+<pre><code class="lang-rust">#[error(<span class="hljs-string">"Invalid state: {0}"</span>)]
+<span class="hljs-function"><span class="hljs-title">InvalidState</span><span class="hljs-params">(String)</span></span>,
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Indicates an unexpected program state (e.g.,
+      a null where a value is required, inconsistent internal data).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> describing the invalid
+      state.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Invalid state: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::InvalidState(<span class="hljs-string">"unexpected null"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Invalid state: unexpected null"</span>);
+</code></pre>
+<hr />
+<h3 id="-internal-"><code>Internal</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[<span class="hljs-meta-keyword">error</span>("Internal <span class="hljs-meta-keyword">error</span>: {0}")]</span>
+Internal(<span class="hljs-keyword">String</span>),
+</code></pre>
+<ul>
+   <li>
+      <strong>Description</strong>: Used for internal errors that should not
+      normally occur (e.g., bugs in the code, unreachable conditions).
+   </li>
+   <li>
+      <strong>Fields</strong>: A <code>String</code> with details suitable for
+      debugging.
+   </li>
+   <li>
+      <strong>Display</strong>:
+      <code>&quot;Internal error: {message}&quot;</code>.
+   </li>
+   <li><strong>Source</strong>: <code>None</code>.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">err</span> = <span class="hljs-keyword">Error</span>::Internal(<span class="hljs-string">"bug in code"</span>.to_string());
+assert_eq!(<span class="hljs-built_in">err</span>.to_string(), <span class="hljs-string">"Internal error: bug in code"</span>);
+</code></pre>
+<hr />
+<h2 id="-result-t-type-alias"><code>Result&lt;T&gt;</code> Type Alias</h2>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">type</span> <span class="hljs-title">Result</span></span>&lt;T&gt; = core::result::<span class="hljs-built_in">Result</span>&lt;T, Error&gt;;
+</code></pre>
+<ul>
+   <li>
+      <strong>Purpose</strong>: A convenient alias so that functions can return
+      <code>Result&lt;T&gt;</code> instead of the more verbose
+      <code>std::result::Result&lt;T, librawssg_error::Error&gt;</code>.
+   </li>
+   <li>
+      <strong>Usage</strong>: Throughout the <code>librawssg</code> ecosystem,
+      functions that may fail with any of the above errors use this alias.
+   </li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">read_config</span></span>(path: &amp;<span class="hljs-keyword">str</span>) -&gt; librawssg_error::<span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt; {
+    <span class="hljs-keyword">let</span> content = std::fs::read_to_string(path)?; <span class="hljs-comment">// `?` converts io::Error into Error::Io</span>
+    <span class="hljs-literal">Ok</span>(content)
+}
+</code></pre>
+<hr />
+<h2 id="error-sources-and-std-error-error-">
+   Error Sources and <code>std::error::Error</code>
+</h2>
+<p>
+   All variants of <code>Error</code> implement
+   <code>std::error::Error</code> (via <code>thiserror</code>). The
+   <code>source()</code> method returns:
+</p>
+<ul>
+   <li>
+      For <code>Io</code>: <code>Some(&amp;self.0)</code> (the underlying
+      <code>io::Error</code>).
+   </li>
+   <li>
+      For <code>Metadata</code>: <code>Some(self.source.as_ref())</code> (the
+      boxed error).
+   </li>
+   <li>For all other variants: <code>None</code>.</li>
+</ul>
+<p>
+   This allows error chains to be inspected using
+   <code>std::error::Error::source()</code>.
+</p>
+<p><strong>Example</strong> (from integration tests):</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> source: <span class="hljs-built_in">Box</span>&lt;dyn core::error::Error + <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span>&gt; =
+    <span class="hljs-built_in">Box</span>::new(std::io::Error::other(<span class="hljs-string">"bad yaml"</span>));
+<span class="hljs-keyword">let</span> err = Error::Metadata {
+    path: PathBuf::from(<span class="hljs-string">"content/post.md"</span>),
+    source,
+};
+
+<span class="hljs-keyword">let</span> as_core_error: &amp;dyn core::error::Error = &amp;err;
+<span class="hljs-keyword">let</span> source_ref = as_core_error.source().unwrap();
+<span class="hljs-built_in">assert_eq!</span>(source_ref.to_string(), <span class="hljs-string">"bad yaml"</span>);
+</code></pre>
+<hr />
+<h2 id="conversion-from-std-io-error-">
+   Conversion from <code>std::io::Error</code>
+</h2>
+<p>
+   The <code>Io</code> variant has the <code>#[from]</code> attribute, which
+   automatically generates:
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">impl</span> <span class="hljs-built_in">From</span>&lt;std::io::Error&gt; <span class="hljs-keyword">for</span> Error {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">from</span></span>(err: std::io::Error) -&gt; Error {
+        Error::Io(err)
+    }
+}
+</code></pre>
+<p>
+   This enables the <code>?</code> operator to convert
+   <code>std::io::Error</code> into <code>Error</code> in any function returning
+   <code>Result&lt;T, Error&gt;</code> (or
+   <code>librawssg_error::Result&lt;T&gt;</code>).
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">read_file</span></span>(path: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt; {
+    <span class="hljs-keyword">let</span> content = std::fs::read_to_string(path)?; <span class="hljs-comment">// io::Error becomes Error::Io</span>
+    <span class="hljs-literal">Ok</span>(content)
+}
+</code></pre>
+<hr />
+<h2 id="usage-examples-from-tests">Usage Examples from Tests</h2>
+<p>
+   The test suite provides excellent examples of how to construct and use the
+   error type.
+</p>
+<h3 id="display-messages">Display Messages</h3>
+<p>
+   Each variant has a test asserting its exact <code>Display</code> output. For
+   example:
+</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[test]</span>
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">display_for_config_error</span></span>() {
+    <span class="hljs-keyword">let</span> err = Error::Config(<span class="hljs-string">"invalid YAML"</span>.to_string());
+    <span class="hljs-built_in">assert_eq!</span>(err.to_string(), <span class="hljs-string">"Configuration error: invalid YAML"</span>);
+}
+</code></pre>
+<p>All 15 variants have similar tests in <code>unit_tests.rs</code>.</p>
+<h3 id="using-the-operator">Using the <code>?</code> Operator</h3>
+<p>
+   The integration test
+   <code>io_error_propagates_via_question_mark</code> demonstrates how
+   <code>?</code> works:
+</p>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">read_file</span></span>(path: &amp;<span class="hljs-keyword">str</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt; {
+    <span class="hljs-keyword">let</span> content = std::fs::read_to_string(path)?;
+    <span class="hljs-literal">Ok</span>(content)
+}
+
+<span class="hljs-meta">#[test]</span>
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">io_error_propagates_via_question_mark</span></span>() {
+    <span class="hljs-keyword">let</span> result = read_file(<span class="hljs-string">"definitely_not_exists.txt"</span>);
+    <span class="hljs-built_in">assert!</span>(result.is_err());
+    <span class="hljs-built_in">assert!</span>(matches!(result, <span class="hljs-literal">Err</span>(Error::Io(_))));
+}
+</code></pre>
+<h3 id="source-chain">Source Chain</h3>
+<p>
+   The <code>metadata_error_can_hold_boxed_dyn_error</code> test shows how to
+   store an arbitrary error and retrieve it via <code>source()</code>:
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> source: <span class="hljs-built_in">Box</span>&lt;dyn core::error::Error + <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span>&gt; =
+    <span class="hljs-built_in">Box</span>::new(std::io::Error::other(<span class="hljs-string">"bad yaml"</span>));
+<span class="hljs-keyword">let</span> err = Error::Metadata {
+    path: PathBuf::from(<span class="hljs-string">"content/post.md"</span>),
+    source,
+};
+
+<span class="hljs-keyword">let</span> as_core_error: &amp;dyn core::error::Error = &amp;err;
+<span class="hljs-keyword">let</span> source_ref = as_core_error.source();
+<span class="hljs-built_in">assert!</span>(source_ref.is_some());
+</code></pre>
+<h3 id="property-tests">Property Tests</h3>
+<p>
+   Property tests verify that the error message always preserves the input
+   string exactly, regardless of content (including empty strings, newlines,
+   special characters):
+</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[test]</span>
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">config_error_message_preserves_input</span></span>() {
+    <span class="hljs-keyword">let</span> samples = [
+        <span class="hljs-string">""</span>,
+        <span class="hljs-string">"short"</span>,
+        <span class="hljs-string">"a very long error message with symbols !@#$%^&amp;*()"</span>,
+        <span class="hljs-string">"line1\nline2"</span>,
+    ];
+
+    <span class="hljs-keyword">for</span> sample <span class="hljs-keyword">in</span> samples {
+        <span class="hljs-keyword">let</span> err = Error::Config(sample.to_string());
+        <span class="hljs-built_in">assert_eq!</span>(err.to_string(), <span class="hljs-built_in">format!</span>(<span class="hljs-string">"Configuration error: {sample}"</span>));
+    }
+}
+</code></pre>
+<p>
+   Similar tests exist for <code>PathTraversal</code> and <code>Render</code>.
+</p>
+<hr />
+<h2 id="guidelines-for-error-usage">Guidelines for Error Usage</h2>
+<p>
+   When writing code in the <code>librawssg</code> ecosystem, follow these
+   recommendations:
+</p>
+<ul>
+   <li>
+      <strong>Use the most specific variant</strong> that describes the failure.
+      For example:
+      <ul>
+         <li>I/O failures → <code>Error::Io</code>.</li>
+         <li>Missing file/resource → <code>Error::NotFound</code>.</li>
+         <li>Invalid user input → <code>Error::Validation</code>.</li>
+         <li>
+            Security issue (path traversal) → <code>Error::PathTraversal</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <strong>Attach context when possible</strong> – Include the relevant path,
+      key, or identifier in the error message string.
+   </li>
+   <li>
+      <strong>Preserve source errors</strong> – If an underlying error is
+      available, use the <code>Metadata</code> variant (or add a new variant
+      with a <code>#[source]</code> field) to maintain the error chain.
+   </li>
+   <li>
+      <strong>Avoid matching exhaustively on <code>Error</code></strong> –
+      Because the enum is non‑exhaustive, always include a catch‑all arm when
+      matching to prevent future breakage.
+   </li>
+   <li>
+      <strong>Use <code>Result&lt;T&gt;</code> alias</strong> for concise
+      function signatures.
+   </li>
+</ul>
+<hr />
+<h2 id="testing-suite-overview">Testing Suite Overview</h2>
+<p>The crate includes three test files:</p>
+<ul>
+   <li>
+      <strong><code>unit_tests.rs</code></strong> – Tests each variant’s
+      <code>Display</code> message, <code>source()</code> for
+      <code>Metadata</code>, <code>From&lt;io::Error&gt;</code> conversion, the
+      <code>Result</code> alias, and <code>Debug</code> output.
+   </li>
+   <li>
+      <strong><code>integration_tests.rs</code></strong> – Tests the
+      <code>?</code> operator integration and the source chain for
+      <code>Metadata</code> using a boxed dynamic error.
+   </li>
+   <li>
+      <strong><code>property_tests.rs</code></strong> – Property‑based tests
+      that verify error messages preserve arbitrary input strings for
+      <code>Config</code>, <code>PathTraversal</code>, and <code>Render</code>.
+   </li>
+</ul>
+<p>
+   Together, these tests ensure the error type is robust, easy to use, and
+   consistent.
+</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>
+   <code>librawssg_error</code> provides a centralized, well‑structured error
+   type for the entire static site generator project. With 15 descriptive
+   variants, automatic <code>Display</code> and
+   <code>Error</code> implementations, convenient conversion from
+   <code>io::Error</code>, and support for error sources, it simplifies error
+   handling across all modules. The non‑exhaustive design guarantees future
+   extensibility without breaking downstream code.
+</p>
+<p>For further details, refer to the source code and test files.</p>

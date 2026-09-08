@@ -1,0 +1,1139 @@
+<h1 id="librawssg_compiler">librawssg_compiler</h1>
+<p>
+   <strong>Version</strong>: 1.0.0 (implied)<br /><strong>Crate name</strong>:
+   <code>librawssg_compiler</code><br /><strong>Description</strong>: Provides
+   the core compilation pipeline for the <code>librawssg</code> static site
+   generator. This crate orchestrates the entire build process: reading content
+   files, processing them via pluggable processors, rendering templates, copying
+   static assets, running custom generators, and outputting the final site
+   atomically.
+</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+   <li><a href="#overview">Overview</a></li>
+   <li><a href="#modules-and-re-exports">Modules and Re‑exports</a></li>
+   <li>
+      <a href="#struct-pipelinebuilder"><code>PipelineBuilder</code></a>
+      <ul>
+         <li>
+            <a href="#pipelinebuilder-new">Constructor <code>new()</code></a>
+         </li>
+         <li>
+            <a href="#pipelinebuilder-builder-methods">Builder Methods</a>
+            <ul>
+               <li>
+                  <a href="#pipelinebuilder-config"><code>config()</code></a>
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-load_config"
+                     ><code>load_config()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-content_dir"
+                     ><code>content_dir()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-output_dir"
+                     ><code>output_dir()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-with_fs"><code>with_fs()</code></a>
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-with_renderer"
+                     ><code>with_renderer()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-add_processor"
+                     ><code>add_processor()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-with_context_builder"
+                     ><code>with_context_builder()</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#pipelinebuilder-add_generator"
+                     ><code>add_generator()</code></a
+                  >
+               </li>
+            </ul>
+         </li>
+         <li>
+            <a href="#pipelinebuilder-build"><code>build()</code> Method</a>
+         </li>
+         <li>
+            <a href="#pipelinebuilder-default"
+               ><code>Default</code> Implementation</a
+            >
+         </li>
+         <li><a href="#pipelinebuilder-example">Example Usage</a></li>
+      </ul>
+   </li>
+   <li>
+      <a href="#trait-contextbuilder"><code>ContextBuilder</code> Trait</a>
+      <ul>
+         <li>
+            <a href="#contextbuilder-build_context"
+               >Required Method <code>build_context()</code></a
+            >
+         </li>
+         <li>
+            <a href="#struct-teracontextbuilder"
+               ><code>TeraContextBuilder</code></a
+            >
+            <ul>
+               <li>
+                  <a href="#teracontextbuilder-implementation"
+                     >Implementation Details</a
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#trait-generator"><code>Generator</code> Trait</a>
+      <ul>
+         <li>
+            <a href="#generator-generate"
+               >Required Method <code>generate()</code></a
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#function-match_pattern">Pattern Matching Function</a>
+      <ul>
+         <li><a href="#match_pattern-signature">Signature</a></li>
+         <li><a href="#match_pattern-syntax">Supported Glob Syntax</a></li>
+         <li><a href="#match_pattern-algorithm">Algorithm Overview</a></li>
+         <li><a href="#match_pattern-examples">Examples</a></li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-pipeline"><code>Pipeline</code> Struct</a>
+      <ul>
+         <li>
+            <a href="#pipeline-config">Accessor <code>config()</code></a>
+         </li>
+         <li>
+            <a href="#pipeline-run">Method <code>run()</code></a>
+         </li>
+         <li>
+            <a href="#pipeline-internal-workflow">Internal Workflow</a>
+            <ul>
+               <li>
+                  <a href="#pipeline-document-processing"
+                     >Document Processing</a
+                  >
+               </li>
+               <li>
+                  <a href="#pipeline-content-type"
+                     >Content Type Determination</a
+                  >
+               </li>
+               <li><a href="#pipeline-rendering">Rendering</a></li>
+               <li><a href="#pipeline-list-generation">List Generation</a></li>
+               <li><a href="#pipeline-static-assets">Static Assets</a></li>
+               <li><a href="#pipeline-generators">Generators</a></li>
+               <li>
+                  <a href="#pipeline-atomic-output"
+                     >Atomic Output Replacement</a
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li><a href="#error-handling">Error Handling</a></li>
+   <li>
+      <a href="#complete-example-from-tests">Complete Example from Tests</a>
+      <ul>
+         <li><a href="#example-setup">Setting Up a Pipeline</a></li>
+         <li><a href="#example-run">Running the Pipeline</a></li>
+         <li><a href="#example-verify">Verifying Output</a></li>
+      </ul>
+   </li>
+   <li><a href="#testing-suite-overview">Testing Suite Overview</a></li>
+   <li><a href="#conclusion">Conclusion</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>
+   <code>librawssg_compiler</code> is the orchestration layer that ties together
+   all other components of the static site generator:
+</p>
+<ul>
+   <li>
+      <strong><code>Config</code></strong> from
+      <code>librawssg_config</code> defines content rules and paths.
+   </li>
+   <li>
+      <strong><code>Processor</code></strong> from
+      <code>librawssg_handler</code> transforms source files into
+      <code>Document</code> objects.
+   </li>
+   <li>
+      <strong><code>Renderer</code></strong> and
+      <strong><code>RenderContext</code></strong> from
+      <code>librawssg_templates</code> handle template rendering.
+   </li>
+   <li>
+      <strong><code>FileSystem</code></strong> from
+      <code>librawssg_fs</code> abstracts all I/O operations.
+   </li>
+   <li>
+      <strong><code>Generator</code></strong> (defined here) allows custom
+      post‑processing steps.
+   </li>
+   <li>
+      <strong><code>ContextBuilder</code></strong> (defined here) constructs the
+      render context from a <code>Document</code> and <code>Config</code>.
+   </li>
+</ul>
+<p>
+   The main entry point is <code>PipelineBuilder</code>, which constructs a
+   <code>Pipeline</code> after validating the configuration and ensuring
+   mandatory components are present. Running the pipeline performs the full site
+   generation in an atomic fashion, producing output in the configured output
+   directory.
+</p>
+<hr />
+<h2 id="modules-and-re-exports">Modules and Re‑exports</h2>
+<p>
+   The crate root (<code>lib.rs</code>) declares the following public modules:
+</p>
+<ul>
+   <li><code>builder</code> – Contains <code>PipelineBuilder</code>.</li>
+   <li>
+      <code>context</code> – Contains <code>ContextBuilder</code> trait and
+      <code>TeraContextBuilder</code>.
+   </li>
+   <li><code>generator</code> – Contains <code>Generator</code> trait.</li>
+   <li><code>pattern</code> – Contains <code>match_pattern</code> function.</li>
+   <li><code>pipeline</code> – Contains <code>Pipeline</code> struct.</li>
+</ul>
+<p>Re‑exported types at the crate root:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> builder::PipelineBuilder;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> context::ContextBuilder;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> context::TeraContextBuilder;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> generator::Generator;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> pipeline::Pipeline;
+</code></pre>
+<p>
+   The <code>match_pattern</code> function is also re‑exported? Actually it is
+   in <code>pattern</code> module and not re‑exported at root, so users must use
+   <code>librawssg_compiler::pattern::match_pattern</code>. However, in
+   <code>pipeline.rs</code> it is imported via
+   <code>crate::pattern::match_pattern</code>, but for external users they need
+   to access it via module path.
+</p>
+<hr />
+<h2 id="struct-pipelinebuilder-">Struct <code>PipelineBuilder</code></h2>
+<p>
+   <code>PipelineBuilder</code> is a builder‑style struct that collects all
+   components needed to run the compilation pipeline and then builds a
+   <code>Pipeline</code>.
+</p>
+<pre><code class="lang-rust">pub struct <span class="hljs-class">PipelineBuilder </span>{
+<span class="hljs-symbol">    config:</span> Config,
+<span class="hljs-symbol">    content_dir:</span> PathBuf,
+<span class="hljs-symbol">    output_dir:</span> PathBuf,
+<span class="hljs-symbol">    fs:</span> Box<span class="hljs-params">&lt;dyn FileSystem&gt;</span>,
+<span class="hljs-symbol">    renderer:</span> Option<span class="hljs-params">&lt;Box&lt;dyn Renderer&gt;</span>&gt;,
+<span class="hljs-symbol">    processors:</span> Vec<span class="hljs-params">&lt;Box&lt;dyn Processor&gt;</span>&gt;,
+<span class="hljs-symbol">    context_builder:</span> Option<span class="hljs-params">&lt;Box&lt;dyn ContextBuilder&gt;</span>&gt;,
+<span class="hljs-symbol">    generators:</span> Vec<span class="hljs-params">&lt;Box&lt;dyn Generator&gt;</span>&gt;,
+}
+</code></pre>
+<p>
+   <strong>Note</strong>: Fields are private; use the builder methods to
+   configure.
+</p>
+<h3 id="-pipelinebuilder-new-"><code>PipelineBuilder::new</code></h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">new</span></span>() -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p><strong>Purpose</strong>: Creates a new builder with default values:</p>
+<ul>
+   <li><code>config</code>: <code>Config::default()</code></li>
+   <li><code>content_dir</code>: <code>&quot;content&quot;</code></li>
+   <li><code>output_dir</code>: <code>&quot;dist&quot;</code></li>
+   <li><code>fs</code>: <code>Box::new(RealFs)</code></li>
+   <li><code>renderer</code>: <code>None</code></li>
+   <li><code>processors</code>: empty vector</li>
+   <li><code>context_builder</code>: <code>None</code></li>
+   <li><code>generators</code>: empty vector</li>
+</ul>
+<p><strong>Returns</strong>: A fresh <code>PipelineBuilder</code>.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> builder = <span class="hljs-type">PipelineBuilder</span>::<span class="hljs-function"><span class="hljs-keyword">new</span>();</span>
+</code></pre>
+<hr />
+<h3 id="pipelinebuilder-builder-methods">PipelineBuilder Builder Methods</h3>
+<p>
+   All builder methods consume <code>self</code> and return <code>Self</code>,
+   allowing method chaining.
+</p>
+<h4 id="-config-"><code>config</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">config</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, config: Config) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p><strong>Purpose</strong>: Sets the configuration object.</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>config</code>: A <code>Config</code> instance from
+      <code>librawssg_config</code>.
+   </li>
+</ul>
+<p><strong>Returns</strong>: The builder with the config set.</p>
+<h4 id="-load_config-"><code>load_config</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">load_config</span></span>&lt;P: <span class="hljs-built_in">AsRef</span>&lt;Path&gt; + <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span>&gt;(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, path: P) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-keyword">Self</span>&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Reads a YAML config file from disk and parses it
+   into a <code>Config</code>. Errors are converted to
+   <code>Error::Config</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Path to the YAML file.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(Self)</code> if parsing succeeds,
+   otherwise <code>Err(Error::Config)</code>.
+</p>
+<p>
+   <strong>Note</strong>: The file is read using standard
+   <code>std::fs::read_to_string</code>; the error is wrapped in
+   <code>Error::Config</code>.
+</p>
+<h4 id="-content_dir-"><code>content_dir</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">content_dir</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, dir: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;PathBuf&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p><strong>Purpose</strong>: Overrides the content directory.</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>dir</code>: Any type convertible to <code>PathBuf</code>.</li>
+</ul>
+<p>
+   <strong>Default</strong>: <code>&quot;content&quot;</code> (but may be
+   overridden by config if not explicitly set; see <code>build()</code>).
+</p>
+<h4 id="-output_dir-"><code>output_dir</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">output_dir</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, dir: <span class="hljs-keyword">impl</span> <span class="hljs-built_in">Into</span>&lt;PathBuf&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p><strong>Purpose</strong>: Overrides the output directory.</p>
+<p><strong>Default</strong>: <code>&quot;dist&quot;</code>.</p>
+<h4 id="-with_fs-"><code>with_fs</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">with_fs</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, fs: <span class="hljs-built_in">Box</span>&lt;dyn FileSystem&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Sets a custom filesystem implementation. Useful for
+   testing or non‑standard backends.
+</p>
+<p><strong>Default</strong>: <code>RealFs</code>.</p>
+<h4 id="-with_renderer-"><code>with_renderer</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">with_renderer</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, renderer: <span class="hljs-built_in">Box</span>&lt;dyn Renderer&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Sets the template renderer.
+   <strong>Mandatory</strong>; <code>build()</code> will fail if not set.
+</p>
+<h4 id="-add_processor-"><code>add_processor</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">add_processor</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, processor: <span class="hljs-built_in">Box</span>&lt;dyn Processor&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Adds a content processor to the pipeline. Multiple
+   processors can be added; they are tried in order for each source file.
+</p>
+<h4 id="-with_context_builder-"><code>with_context_builder</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">with_context_builder</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, builder: <span class="hljs-built_in">Box</span>&lt;dyn ContextBuilder&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Sets the context builder.
+   <strong>Mandatory</strong>; <code>build()</code> will fail if not set.
+</p>
+<h4 id="-add_generator-"><code>add_generator</code></h4>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">add_generator</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, generator: <span class="hljs-built_in">Box</span>&lt;dyn Generator&gt;) -&gt; <span class="hljs-keyword">Self</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Adds a post‑processing generator. Generators run
+   after all documents are rendered and static assets copied.
+</p>
+<hr />
+<h3 id="pipelinebuilder-build">PipelineBuilder::build</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">build</span></span>(<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;Pipeline&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Validates the configuration, ensures required
+   components are present, and constructs a <code>Pipeline</code>.
+</p>
+<p><strong>Behavior</strong>:</p>
+<ol>
+   <li>
+      Calls <code>self.config.validate()?</code> (see
+      <code>librawssg_config::Config::validate</code>).
+   </li>
+   <li>
+      If <code>content_dir</code> is still the default
+      <code>&quot;content&quot;</code> (i.e., not changed by
+      <code>content_dir()</code>), it is replaced with
+      <code>self.config.build.content_dir</code>.
+   </li>
+   <li>
+      Similarly, if <code>output_dir</code> is still
+      <code>&quot;dist&quot;</code>, it is replaced with
+      <code>self.config.build.output_dir</code>.
+   </li>
+   <li>
+      Takes the renderer from <code>self.renderer</code> (using
+      <code>take()</code>). If <code>None</code>, returns
+      <code>Error::Config(&quot;template renderer not set&quot;)</code>.
+   </li>
+   <li>
+      Takes the context builder from <code>self.context_builder</code>. If
+      <code>None</code>, returns
+      <code>Error::Config(&quot;context builder not set&quot;)</code>.
+   </li>
+   <li>
+      Moves all remaining fields into a new <code>Pipeline</code> and returns
+      <code>Ok</code>.
+   </li>
+</ol>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(Pipeline)</code> on success.</li>
+   <li><code>Err(Error::Validation)</code> if config invalid.</li>
+   <li>
+      <code>Err(Error::Config)</code> if renderer or context builder missing.
+   </li>
+</ul>
+<hr />
+<h3 id="pipelinebuilder-default">PipelineBuilder Default</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">impl</span> <span class="hljs-built_in">Default</span> <span class="hljs-keyword">for</span> PipelineBuilder {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">default</span></span>() -&gt; <span class="hljs-keyword">Self</span> {
+        Self::new()
+    }
+}
+</code></pre>
+<p>Allows creating with <code>PipelineBuilder::default()</code>.</p>
+<hr />
+<h3 id="pipelinebuilder-example">PipelineBuilder Example</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_compiler::{PipelineBuilder, TeraContextBuilder};
+<span class="hljs-keyword">use</span> librawssg_config::Config;
+<span class="hljs-keyword">use</span> librawssg_fs::RealFs;
+<span class="hljs-keyword">use</span> librawssg_handler::Processor;
+<span class="hljs-keyword">use</span> librawssg_templates::{Renderer, TeraRenderer};
+
+<span class="hljs-comment">// Assuming custom processor and renderer exist</span>
+<span class="hljs-keyword">let</span> config = Config::new().with_site_name(<span class="hljs-string">"My Site"</span>);
+<span class="hljs-keyword">let</span> processor = <span class="hljs-built_in">Box</span>::new(MyProcessor);
+<span class="hljs-keyword">let</span> renderer = <span class="hljs-built_in">Box</span>::new(TeraRenderer::new()); <span class="hljs-comment">// TeraRenderer must be configured with templates beforehand</span>
+<span class="hljs-keyword">let</span> context_builder = <span class="hljs-built_in">Box</span>::new(TeraContextBuilder);
+
+<span class="hljs-keyword">let</span> pipeline = PipelineBuilder::new()
+    .config(config)
+    .content_dir(<span class="hljs-string">"src"</span>)
+    .output_dir(<span class="hljs-string">"public"</span>)
+    .with_fs(<span class="hljs-built_in">Box</span>::new(RealFs))
+    .with_renderer(renderer)
+    .with_context_builder(context_builder)
+    .add_processor(processor)
+    .build()?;
+</code></pre>
+<hr />
+<h2 id="trait-contextbuilder-">Trait <code>ContextBuilder</code></h2>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">ContextBuilder</span></span>: <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span> {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">build_context</span></span>(&amp;<span class="hljs-keyword">self</span>, config: &amp;Config, doc: &amp;Document) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Box</span>&lt;dyn RenderContext&gt;&gt;;
+}
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Abstract factory that creates a
+   <code>RenderContext</code> from the global <code>Config</code> and a specific
+   <code>Document</code>. The renderer then uses this context to render the
+   document&#39;s template.
+</p>
+<p>
+   <strong>Requirements</strong>: Implementors must be <code>Send + Sync</code>.
+</p>
+<h3 id="-build_context-"><code>build_context</code></h3>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>config</code>: Reference to the site configuration.</li>
+   <li><code>doc</code>: Reference to the document being rendered.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li>
+      <code>Ok(Box&lt;dyn RenderContext&gt;)</code> – a boxed trait object
+      holding the render context.
+   </li>
+   <li><code>Err(librawssg_error::Error)</code> if context creation fails.</li>
+</ul>
+<hr />
+<h2 id="struct-teracontextbuilder-">Struct <code>TeraContextBuilder</code></h2>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Default, Clone, Copy)]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">TeraContextBuilder</span></span>;
+</code></pre>
+<p>
+   A concrete implementation of <code>ContextBuilder</code> that produces a
+   <code>tera::Context</code> populated with common page and site data.
+</p>
+<h3 id="implementation-details">Implementation Details</h3>
+<p>
+   <code>TeraContextBuilder</code> creates a new <code>tera::Context</code> and
+   inserts the following keys:
+</p>
+<table>
+   <thead>
+      <tr>
+         <th>Key</th>
+         <th>Value Source</th>
+         <th>Description</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><code>site</code></td>
+         <td><code>&amp;config.site</code></td>
+         <td>The full <code>SiteConfig</code> object.</td>
+      </tr>
+      <tr>
+         <td><code>page_title</code></td>
+         <td><code>&amp;doc.metadata.title</code></td>
+         <td>Document title.</td>
+      </tr>
+      <tr>
+         <td><code>page_description</code></td>
+         <td><code>&amp;doc.metadata.description</code></td>
+         <td>Document description.</td>
+      </tr>
+      <tr>
+         <td><code>page_author</code></td>
+         <td><code>&amp;doc.metadata.author</code></td>
+         <td>Optional author.</td>
+      </tr>
+      <tr>
+         <td><code>page_date</code></td>
+         <td><code>&amp;doc.metadata.date</code></td>
+         <td>Optional publication date.</td>
+      </tr>
+      <tr>
+         <td><code>page_tags</code></td>
+         <td><code>&amp;doc.metadata.tags</code></td>
+         <td>Vector of tags.</td>
+      </tr>
+      <tr>
+         <td><code>page_content</code></td>
+         <td><code>&amp;doc.body</code></td>
+         <td>The rendered body content of the document.</td>
+      </tr>
+      <tr>
+         <td><code>page_url</code></td>
+         <td><code>&amp;doc.url</code></td>
+         <td>Relative URL of the document.</td>
+      </tr>
+      <tr>
+         <td><code>page_depth</code></td>
+         <td><code>&amp;doc.depth</code></td>
+         <td>Depth in the site hierarchy.</td>
+      </tr>
+      <tr>
+         <td><code>page_type</code></td>
+         <td><code>&amp;doc.content_type</code></td>
+         <td>Content type identifier (e.g., <code>&quot;blog&quot;</code>).</td>
+      </tr>
+      <tr>
+         <td><code>page_is_list</code></td>
+         <td><code>&amp;doc.is_list</code></td>
+         <td>Boolean indicating list page.</td>
+      </tr>
+      <tr>
+         <td><code>page_list_items</code></td>
+         <td><code>&amp;doc.list_items</code></td>
+         <td>Optional vector of child documents for lists.</td>
+      </tr>
+   </tbody>
+</table>
+<p>
+   <strong>Note</strong>: The <code>page_list_items</code> field is inserted as
+   <code>&amp;doc.list_items</code> which is
+   <code>Option&lt;Vec&lt;Document&gt;&gt;</code>. In Tera templates, this will
+   be <code>None</code> or an array.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_compiler::TeraContextBuilder;
+<span class="hljs-keyword">let</span> builder = TeraContextBuilder;
+<span class="hljs-keyword">let</span> ctx = builder.build_context(&amp;config, &amp;doc)?;
+<span class="hljs-comment">// Pass `ctx` to renderer.render(...)</span>
+</code></pre>
+<hr />
+<h2 id="trait-generator-">Trait <code>Generator</code></h2>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">Generator</span></span>: <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span> {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">generate</span></span>(&amp;<span class="hljs-keyword">self</span>, pipeline: &amp;Pipeline, output_base: &amp;Path) -&gt; <span class="hljs-built_in">Result</span>&lt;()&gt;;
+}
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Allows custom post‑processing steps after the main
+   site generation. Generators can write additional files to the output
+   directory (e.g., RSS feed, sitemap, search index).
+</p>
+<p>
+   <strong>Requirements</strong>: Implementors must be <code>Send + Sync</code>.
+</p>
+<h3 id="-generate-"><code>generate</code></h3>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>pipeline</code>: Reference to the running <code>Pipeline</code>,
+      which provides access to its configuration, filesystem, etc. (though the
+      fields are crate‑private, the <code>config()</code> method is available).
+   </li>
+   <li>
+      <code>output_base</code>: Path to the temporary output directory where
+      generated files should be written. The pipeline&#39;s
+      <code>run()</code> method later moves this directory atomically to the
+      final output location.
+   </li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<ul>
+   <li><code>Ok(())</code> on success.</li>
+   <li><code>Err(librawssg_error::Error)</code> on failure.</li>
+</ul>
+<p><strong>Example</strong> (from tests):</p>
+<pre><code class="lang-rust"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">DummyGenerator</span></span>;
+
+<span class="hljs-keyword">impl</span> Generator <span class="hljs-keyword">for</span> DummyGenerator {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">generate</span></span>(&amp;<span class="hljs-keyword">self</span>, _pipeline: &amp;Pipeline, output_base: &amp;Path) -&gt; <span class="hljs-built_in">Result</span>&lt;()&gt; {
+        <span class="hljs-keyword">let</span> path = output_base.join(<span class="hljs-string">"generated.txt"</span>);
+        std::fs::write(&amp;path, <span class="hljs-string">b"generated"</span>)?;
+        <span class="hljs-literal">Ok</span>(())
+    }
+}
+</code></pre>
+<hr />
+<h2 id="function-match_pattern-">Function <code>match_pattern</code></h2>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">match_pattern</span></span>(pattern: &amp;<span class="hljs-keyword">str</span>, path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span>
+</code></pre>
+<p><strong>Location</strong>: <code>librawssg_compiler::pattern</code></p>
+<p>
+   <strong>Purpose</strong>: Checks whether a file path matches a glob pattern
+   with support for <code>*</code> (within a segment) and
+   <code>**</code> (across segments). Used by the pipeline to assign content
+   types based on <code>ContentRule</code> patterns.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>pattern</code>: A glob‑like pattern string, e.g.,
+      <code>&quot;blog/**/*.html&quot;</code>.
+   </li>
+   <li>
+      <code>path</code>: A <code>Path</code> to test (usually a relative path
+      from the content directory).
+   </li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>true</code> if the path matches the pattern;
+   <code>false</code> otherwise.
+</p>
+<h3 id="supported-glob-syntax">Supported Glob Syntax</h3>
+<ul>
+   <li>
+      <code>*</code> – Matches any sequence of characters within a single path
+      segment (i.e., does not cross <code>/</code>).
+   </li>
+   <li>
+      <code>**</code> – Matches any number of path segments, including zero.
+   </li>
+</ul>
+<p><strong>Limitations</strong>:</p>
+<ul>
+   <li>
+      Only <code>*</code> and <code>**</code> are supported; no character
+      classes (<code>[abc]</code>) or alternation.
+   </li>
+   <li>
+      Patterns are split on <code>/</code>; backslashes are not treated as
+      separators (path normalization may be needed on Windows).
+   </li>
+   <li>
+      The implementation uses a custom recursive algorithm; for complex
+      patterns, behavior may differ from standard glob libraries.
+   </li>
+</ul>
+<h3 id="algorithm-overview">Algorithm Overview</h3>
+<p>
+   The function first converts the path to a string (lossy) and splits both
+   pattern and path by <code>/</code>. It then calls an internal recursive
+   <code>match_pattern_slice</code>. The logic:
+</p>
+<ul>
+   <li>If both pattern and path segments are exhausted → <code>true</code>.</li>
+   <li>
+      If pattern still has segments but path is empty → only
+      <code>**</code> segments are allowed.
+   </li>
+   <li>
+      If first pattern segment is <code>&quot;**&quot;</code>:
+      <ul>
+         <li>If it&#39;s the only segment → <code>true</code>.</li>
+         <li>
+            Otherwise, try matching the rest of the pattern against every suffix
+            of the path.
+         </li>
+      </ul>
+   </li>
+   <li>
+      Otherwise, the first pattern segment must match the first path segment
+      using <code>segment_matches</code> (handles <code>*</code> wildcards), and
+      recursion continues on the rest.
+   </li>
+   <li>
+      <code>segment_matches</code> handles <code>*</code> by trying to match the
+      remainder of the pattern segment against suffixes of the path segment.
+   </li>
+</ul>
+<h3 id="examples">Examples</h3>
+<pre><code class="lang-rust">use <span class="hljs-string">std:</span>:<span class="hljs-string">path:</span>:Path;
+use <span class="hljs-string">librawssg_compiler:</span>:<span class="hljs-string">pattern:</span>:match_pattern;
+
+<span class="hljs-keyword">assert</span>!(match_pattern(<span class="hljs-string">"**/*.html"</span>, <span class="hljs-string">Path:</span>:<span class="hljs-keyword">new</span>(<span class="hljs-string">"blog/post.html"</span>)));
+<span class="hljs-keyword">assert</span>!(match_pattern(<span class="hljs-string">"blog/**/*.html"</span>, <span class="hljs-string">Path:</span>:<span class="hljs-keyword">new</span>(<span class="hljs-string">"blog/2024/post.html"</span>)));
+<span class="hljs-keyword">assert</span>!(match_pattern(<span class="hljs-string">"*.html"</span>, <span class="hljs-string">Path:</span>:<span class="hljs-keyword">new</span>(<span class="hljs-string">"index.html"</span>)));
+<span class="hljs-keyword">assert</span>!(!match_pattern(<span class="hljs-string">"*.html"</span>, <span class="hljs-string">Path:</span>:<span class="hljs-keyword">new</span>(<span class="hljs-string">"blog/post.html"</span>)));
+<span class="hljs-keyword">assert</span>!(match_pattern(<span class="hljs-string">"**"</span>, <span class="hljs-string">Path:</span>:<span class="hljs-keyword">new</span>(<span class="hljs-string">"anything/at/all"</span>)));
+<span class="hljs-keyword">assert</span>!(match_pattern(<span class="hljs-string">"**/*.md"</span>, <span class="hljs-string">Path:</span>:<span class="hljs-keyword">new</span>(<span class="hljs-string">"readme.md"</span>))); <span class="hljs-comment">// zero segments before .md</span>
+</code></pre>
+<hr />
+<h2 id="struct-pipeline-">Struct <code>Pipeline</code></h2>
+<p>
+   The <code>Pipeline</code> is the core execution engine. It is created by
+   <code>PipelineBuilder::build()</code> and holds all necessary components.
+</p>
+<pre><code class="lang-rust">pub struct <span class="hljs-class">Pipeline </span>{
+<span class="hljs-symbol">    config:</span> Config,
+<span class="hljs-symbol">    fs:</span> Box<span class="hljs-params">&lt;dyn FileSystem&gt;</span>,
+<span class="hljs-symbol">    renderer:</span> Box<span class="hljs-params">&lt;dyn Renderer&gt;</span>,
+<span class="hljs-symbol">    processors:</span> Vec<span class="hljs-params">&lt;Box&lt;dyn Processor&gt;</span>&gt;,
+<span class="hljs-symbol">    context_builder:</span> Box<span class="hljs-params">&lt;dyn ContextBuilder&gt;</span>,
+<span class="hljs-symbol">    generators:</span> Vec<span class="hljs-params">&lt;Box&lt;dyn Generator&gt;</span>&gt;,
+<span class="hljs-symbol">    content_dir:</span> PathBuf,
+<span class="hljs-symbol">    output_dir:</span> PathBuf,
+}
+</code></pre>
+<p>
+   All fields are private; access to configuration is provided via the
+   <code>config()</code> method.
+</p>
+<h3 id="pipeline-config">Pipeline::config</h3>
+<pre><code class="lang-rust"><span class="hljs-meta">#[must_use]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">const</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">config</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;Config
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Returns a reference to the configuration used by
+   this pipeline.
+</p>
+<p><strong>Returns</strong>: <code>&amp;Config</code>.</p>
+<hr />
+<h3 id="pipeline-run">Pipeline::run</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">run</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; <span class="hljs-built_in">Result</span>&lt;()&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Executes the full site generation process
+   atomically.
+</p>
+<p><strong>Behavior</strong>:</p>
+<ol>
+   <li>
+      Determines a temporary output directory:
+      <code>output_dir.with_extension(&quot;tmp&quot;)</code>. For example, if
+      <code>output_dir</code> is <code>&quot;dist&quot;</code>, the temp dir is
+      <code>&quot;dist.tmp&quot;</code>.
+   </li>
+   <li>If the temp dir already exists, it is removed.</li>
+   <li>Creates the temp dir.</li>
+   <li>
+      Calls internal <code>generate_to(&amp;tmp_dir)</code> to perform the
+      actual generation into the temporary location.
+   </li>
+   <li>If the final output directory exists, it is removed.</li>
+   <li>
+      Attempts to rename the temp dir to the final output dir.
+      <ul>
+         <li>On success, returns <code>Ok(())</code>.</li>
+         <li>
+            If rename fails with <code>CrossesDevices</code> error (different
+            filesystems), fallback: copy the temp dir contents to the final
+            output dir using <code>copy_dir_all</code> (internal method), then
+            remove the temp dir.
+         </li>
+         <li>
+            For any other error, returns
+            <code>Error::Generation(&quot;atomic rename failed: ...&quot;)</code
+            >.
+         </li>
+      </ul>
+   </li>
+</ol>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> on success, or
+   <code>Err(Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: This atomic approach ensures that the final output
+   directory is never left in a partially generated state; either the old output
+   remains untouched (if generation fails) or the new output replaces it
+   atomically (or near‑atomically).
+</p>
+<hr />
+<h3 id="pipeline-internal-workflow">Pipeline Internal Workflow</h3>
+<p>
+   The internal method
+   <code>generate_to(output_base: &amp;Path)</code> orchestrates the entire
+   generation. The following steps are performed (not public, but described for
+   understanding):
+</p>
+<ol>
+   <li>
+      <strong>Create output directory</strong> –
+      <code>fs.create_dir_all(output_base)</code>.
+   </li>
+   <li>
+      <strong>Process documents</strong> – Calls
+      <code>process_documents()</code> to get a vector of <code>Document</code>.
+   </li>
+   <li>
+      <strong>Group documents by content type</strong> – Builds a
+      <code>HashMap&lt;String, Vec&lt;Document&gt;&gt;</code>.
+   </li>
+   <li>
+      <strong>Render non‑list documents</strong> – For each
+      <code>Document</code> where <code>is_list == false</code>, calls
+      <code>render_document(output_base, doc)</code>.
+   </li>
+   <li>
+      <strong>Generate list pages</strong> – For each content type that has a
+      matching <code>ContentRule</code> with <code>list_enabled == true</code>,
+      <code>list_template</code> set, and at least one document, creates a
+      synthetic list document (<code>is_list = true</code>) and renders it using
+      the list template. The list document’s <code>list_items</code> are all
+      documents of that content type. The output path is
+      <code>&quot;{content_type}/index.html&quot;</code>.
+   </li>
+   <li>
+      <strong>Copy static assets</strong> – If the directory specified by
+      <code>config.build.static_dir</code> exists, its entire contents are
+      copied to <code>output_base/static_dir_name</code> (using
+      <code>copy_dir_all</code>).
+   </li>
+   <li>
+      <strong>Run generators</strong> – Iterates over all
+      <code>generators</code> and calls <code>generate()</code> for each,
+      passing the output base.
+   </li>
+</ol>
+<h4 id="document-processing">Document Processing</h4>
+<p>
+   <code>process_documents()</code> walks the content directory (using
+   <code>fs.walk_dir</code>). For each file, it:
+</p>
+<ul>
+   <li>Computes the path relative to <code>content_dir</code>.</li>
+   <li>
+      Iterates through the processors in order; the first processor whose
+      <code>can_process(rel, &amp;file_path)</code> returns <code>true</code> is
+      used.
+   </li>
+   <li>
+      Calls that processor’s
+      <code>process(&amp;*fs, rel, &amp;content_dir)</code>, which returns
+      <code>Option&lt;Document&gt;</code>.
+   </li>
+   <li>
+      If a document is returned, its <code>content_type</code> is overridden
+      based on the matching content rule (via
+      <code>determine_content_type</code>), and its <code>depth</code> is set to
+      the number of path components minus 1.
+   </li>
+   <li>The document is added to the result list.</li>
+</ul>
+<p>
+   If no processor matches, the file is ignored. If a processor returns
+   <code>Ok(None)</code>, the file is skipped. If any processor returns an
+   error, the whole processing fails.
+</p>
+<h4 id="content-type-determination">Content Type Determination</h4>
+<p>
+   <code>determine_content_type(rel)</code> iterates through the
+   <code>config.content_rules</code> in <strong>reverse order</strong> (so later
+   rules take precedence) and returns the <code>name</code> of the first rule
+   whose <code>pattern</code> matches the relative path. If no rule matches, the
+   content type defaults to <code>&quot;page&quot;</code>.
+</p>
+<h4 id="rendering">Rendering</h4>
+<p>
+   <code>render_document</code> calls <code>template_for_document(doc)</code> to
+   get the template name:
+</p>
+<ul>
+   <li>
+      Iterates through content rules, finds the rule whose
+      <code>name</code> equals <code>doc.content_type</code>.
+   </li>
+   <li>
+      If <code>doc.is_list</code> and the rule has a <code>list_template</code>,
+      that template is used.
+   </li>
+   <li>Otherwise, the rule’s <code>template</code> is used.</li>
+   <li>
+      If no rule is found, returns
+      <code
+         >Error::Generation(&quot;no content rule found for type
+         &#39;...&#39;&quot;)</code
+      >.
+   </li>
+</ul>
+<p>The actual rendering uses:</p>
+<ul>
+   <li>
+      <code>context_builder.build_context(&amp;config, doc)</code> to get a
+      <code>RenderContext</code>.
+   </li>
+   <li>
+      <code>renderer.render(template, &amp;*ctx)</code> to produce the HTML
+      string.
+   </li>
+   <li>
+      <code>write_output(output_base, doc, html.as_bytes())</code> to write the
+      result.
+   </li>
+</ul>
+<h4 id="list-generation">List Generation</h4>
+<p>
+   When generating list pages, the pipeline creates a <code>Metadata</code> with
+   <code>title = content_type</code> and empty description. Then constructs a
+   <code>Document</code> with:
+</p>
+<ul>
+   <li>
+      <code>body</code>: empty string (the list template is expected to use
+      <code>page_list_items</code>).
+   </li>
+   <li>
+      <code>url</code>: <code>&quot;{content_type}/index.html&quot;</code>.
+   </li>
+   <li>
+      <code>output_path</code>:
+      <code>&quot;{content_type}/index.html&quot;</code>.
+   </li>
+   <li>
+      <code>source_path</code>:
+      <code>PathBuf::from(&quot;__list__&quot;)</code> (placeholder).
+   </li>
+   <li><code>depth</code>: <code>1</code>.</li>
+   <li><code>content_type</code>: same as the content type.</li>
+   <li><code>is_list</code>: <code>true</code>.</li>
+</ul>
+<p>
+   Then sets <code>list_items</code> to the cloned vector of documents of that
+   type, and renders using the list template.
+</p>
+<h4 id="static-assets">Static Assets</h4>
+<p>
+   The static directory from <code>config.build.static_dir</code> is copied
+   verbatim. The destination is <code>output_base</code> joined with the static
+   directory’s base name (e.g., if <code>static_dir = &quot;static&quot;</code>,
+   files are copied to <code>output_base/static/</code>). Directories are
+   recursively copied.
+</p>
+<h4 id="generators">Generators</h4>
+<p>
+   After all documents and static files are in place, each registered
+   <code>Generator</code> is invoked with <code>&amp;self</code> and
+   <code>output_base</code>. This allows adding custom files like RSS feeds,
+   sitemaps, etc.
+</p>
+<hr />
+<h2 id="error-handling">Error Handling</h2>
+<p>
+   <code>librawssg_compiler</code> uses <code>librawssg_error::Error</code> for
+   all fallible operations. The common error variants encountered:
+</p>
+<ul>
+   <li>
+      <code>Error::Config</code> – For configuration issues (e.g., missing
+      renderer, invalid config file).
+   </li>
+   <li><code>Error::Validation</code> – From <code>Config::validate</code>.</li>
+   <li>
+      <code>Error::Generation</code> – For errors during pipeline execution
+      (e.g., write failures, unsafe output path).
+   </li>
+   <li>
+      <code>Error::Io</code> – From filesystem operations (though these may be
+      wrapped in <code>Error::Generation</code> in some places).
+   </li>
+   <li><code>Error::Render</code> – From template rendering.</li>
+</ul>
+<p>
+   Methods return <code>Result&lt;T&gt;</code> (alias for
+   <code>std::result::Result&lt;T, librawssg_error::Error&gt;</code>).
+</p>
+<hr />
+<h2 id="complete-example-from-tests">Complete Example from Tests</h2>
+<p>
+   The test file <code>full_compiler_test.rs</code> demonstrates a full working
+   pipeline with mock components. Below is a simplified but complete example.
+</p>
+<h3 id="example-setup">Example Setup</h3>
+<p>Define mock renderer, context, context builder, and processor:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_compiler::{PipelineBuilder, TeraContextBuilder};
+<span class="hljs-keyword">use</span> librawssg_config::{Config, ContentRule};
+<span class="hljs-keyword">use</span> librawssg_fs::{FileSystem, RealFs};
+<span class="hljs-keyword">use</span> librawssg_handler::{Document, Metadata, Processor};
+<span class="hljs-keyword">use</span> librawssg_templates::{RenderContext, Renderer};
+<span class="hljs-keyword">use</span> std::path::{Path, PathBuf};
+
+<span class="hljs-comment">// Mock renderer: returns "rendered:{template_name}"</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">MockRenderer</span></span>;
+<span class="hljs-keyword">impl</span> Renderer <span class="hljs-keyword">for</span> MockRenderer {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">render</span></span>(&amp;<span class="hljs-keyword">self</span>, template_name: &amp;<span class="hljs-keyword">str</span>, _ctx: &amp;dyn RenderContext) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt; {
+        <span class="hljs-literal">Ok</span>(<span class="hljs-built_in">format!</span>(<span class="hljs-string">"rendered:{template_name}"</span>))
+    }
+}
+
+<span class="hljs-comment">// Mock context</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">MockContext</span></span>;
+<span class="hljs-keyword">impl</span> RenderContext <span class="hljs-keyword">for</span> MockContext {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">as_any</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;dyn Any { <span class="hljs-keyword">self</span> }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">as_mut_any</span></span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-keyword">mut</span> dyn Any { <span class="hljs-keyword">self</span> }
+}
+
+<span class="hljs-comment">// Mock context builder</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">MockContextBuilder</span></span>;
+<span class="hljs-keyword">impl</span> ContextBuilder <span class="hljs-keyword">for</span> MockContextBuilder {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">build_context</span></span>(&amp;<span class="hljs-keyword">self</span>, _config: &amp;Config, _doc: &amp;Document) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Box</span>&lt;dyn RenderContext&gt;&gt; {
+        <span class="hljs-literal">Ok</span>(<span class="hljs-built_in">Box</span>::new(MockContext))
+    }
+}
+
+<span class="hljs-comment">// Processor that handles .html files</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">RawHtmlProcessor</span></span>;
+<span class="hljs-keyword">impl</span> Processor <span class="hljs-keyword">for</span> RawHtmlProcessor {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">name</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-symbol">'static</span> <span class="hljs-keyword">str</span> { <span class="hljs-string">"raw-html"</span> }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, relative_path: &amp;Path, _original_path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span> {
+        relative_path.extension().is_some_and(|ext| ext == <span class="hljs-string">"html"</span>)
+    }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">process</span></span>(&amp;<span class="hljs-keyword">self</span>, fs: &amp;dyn FileSystem, relative_path: &amp;Path, content_dir: &amp;Path) -&gt; <span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Option</span>&lt;Document&gt;&gt; {
+        <span class="hljs-keyword">let</span> full_path = content_dir.join(relative_path);
+        <span class="hljs-keyword">let</span> content = fs.read_to_string(&amp;full_path)?;
+        <span class="hljs-keyword">let</span> url = relative_path.with_extension(<span class="hljs-string">"html"</span>).to_string_lossy().to_string();
+        <span class="hljs-keyword">let</span> output_path = PathBuf::from(&amp;url);
+        <span class="hljs-keyword">let</span> metadata = Metadata::new(<span class="hljs-string">"Test"</span>, <span class="hljs-string">"Description"</span>)?;
+        <span class="hljs-keyword">let</span> doc = Document::new(
+            metadata,
+            content,
+            url,
+            output_path,
+            relative_path.to_path_buf(),
+            <span class="hljs-number">0</span>,
+            <span class="hljs-string">"page"</span>.to_string(),
+            <span class="hljs-literal">false</span>,
+        )?;
+        <span class="hljs-literal">Ok</span>(<span class="hljs-literal">Some</span>(doc))
+    }
+}
+
+<span class="hljs-comment">// Config with one rule</span>
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">setup_config</span></span>() -&gt; Config {
+    <span class="hljs-keyword">let</span> <span class="hljs-keyword">mut</span> config = Config::new().with_site_name(<span class="hljs-string">"Compiler Test"</span>);
+    config.add_content_rule(ContentRule::new(<span class="hljs-string">"page"</span>, <span class="hljs-string">"**/*.html"</span>, <span class="hljs-string">"base"</span>));
+    config
+}
+
+<span class="hljs-comment">// Build pipeline</span>
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">build_pipeline</span></span>(content_dir: &amp;Path, output_dir: &amp;Path) -&gt; <span class="hljs-built_in">Result</span>&lt;Pipeline&gt; {
+    PipelineBuilder::new()
+        .config(setup_config())
+        .content_dir(content_dir)
+        .output_dir(output_dir)
+        .with_fs(<span class="hljs-built_in">Box</span>::new(RealFs))
+        .with_renderer(<span class="hljs-built_in">Box</span>::new(MockRenderer))
+        .with_context_builder(<span class="hljs-built_in">Box</span>::new(MockContextBuilder))
+        .add_processor(<span class="hljs-built_in">Box</span>::new(RawHtmlProcessor))
+        .build()
+}
+</code></pre>
+<h3 id="running-the-pipeline">Running the Pipeline</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> tmp = tempfile<span class="hljs-type">::TempDir</span><span class="hljs-type">::new</span>()?;
+<span class="hljs-keyword">let</span> content_dir = tmp.path().<span class="hljs-keyword">join</span>(<span class="hljs-string">"content"</span>);
+<span class="hljs-keyword">let</span> output_dir = tmp.path().<span class="hljs-keyword">join</span>(<span class="hljs-string">"dist"</span>);
+std<span class="hljs-type">::fs</span><span class="hljs-type">::create_dir_all</span>(&amp;content_dir)?;
+std<span class="hljs-type">::fs</span><span class="hljs-type">::write</span>(content_dir.<span class="hljs-keyword">join</span>(<span class="hljs-string">"index.html"</span>), <span class="hljs-string">"&lt;h1&gt;Home&lt;/h1&gt;"</span>)?;
+
+<span class="hljs-keyword">let</span> pipeline = build_pipeline(&amp;content_dir, &amp;output_dir)?;
+pipeline.run()?;
+</code></pre>
+<h3 id="verifying-output">Verifying Output</h3>
+<pre><code class="lang-rust"><span class="hljs-built_in">let</span> output_file = output_dir.<span class="hljs-built_in">join</span>(<span class="hljs-string">"index.html"</span>);
+assert!(output_file.exists());
+<span class="hljs-built_in">let</span> <span class="hljs-built_in">content</span> = <span class="hljs-built_in">std</span>::fs::read_to_string(output_file)?;
+assert_eq!(<span class="hljs-built_in">content</span>, <span class="hljs-string">"rendered:base"</span>);
+</code></pre>
+<hr />
+<h2 id="testing-suite-overview">Testing Suite Overview</h2>
+<p>
+   The test file <code>tests/full_compiler_test.rs</code> contains comprehensive
+   integration tests covering:
+</p>
+<ul>
+   <li>Generation of a single page.</li>
+   <li>
+      Content type rules (different templates for different content types).
+   </li>
+   <li>List page generation.</li>
+   <li>Static asset copying.</li>
+   <li>Custom generators.</li>
+   <li>Atomic replacement of existing output directory.</li>
+   <li>Handling empty content directory.</li>
+   <li>Skipping files that no processor handles.</li>
+   <li>
+      Error cases: missing renderer, missing context builder, invalid config.
+   </li>
+</ul>
+<p>
+   Each test uses temporary directories (<code>tempfile</code>) and mock
+   implementations to isolate components. The tests serve as executable examples
+   of how to configure and run the pipeline.
+</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>
+   <code>librawssg_compiler</code> is the central execution engine of the static
+   site generator. It provides a flexible builder to assemble the necessary
+   components, a robust <code>Pipeline</code> that orchestrates all steps, and
+   extension points via <code>Processor</code>, <code>Renderer</code>,
+   <code>ContextBuilder</code>, and <code>Generator</code>. The pattern matching
+   function and atomic output generation ensure correctness and safety. The
+   comprehensive test suite demonstrates practical usage and edge cases.
+</p>
+<p>For further details, refer to the source code and the test file.</p>

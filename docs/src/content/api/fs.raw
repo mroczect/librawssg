@@ -1,0 +1,1102 @@
+<h1 id="librawssg_fs">librawssg_fs</h1>
+<p>
+   <strong>Version</strong>: 1.0.0 (implied)<br /><strong>Crate name</strong>:
+   <code>librawssg_fs</code><br /><strong>Description</strong>: A filesystem
+   abstraction layer for static site generators. Defines the
+   <code>FileSystem</code> trait with a comprehensive set of file and directory
+   operations, and provides a concrete implementation <code>RealFs</code> that
+   delegates to <code>std::fs</code> and <code>walkdir</code>. The trait
+   includes built‑in path traversal protection and convenience methods for
+   atomic operations.
+</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+   <li><a href="#overview">Overview</a></li>
+   <li><a href="#modules">Modules</a></li>
+   <li>
+      <a href="#trait-filesystem">Trait <code>FileSystem</code></a>
+      <ul>
+         <li><a href="#trait-definition">Trait Definition</a></li>
+         <li>
+            <a href="#required-methods">Required Methods</a>
+            <ul>
+               <li>
+                  <a href="#read_to_string"><code>read_to_string</code></a>
+               </li>
+               <li>
+                  <a href="#read_bytes"><code>read_bytes</code></a>
+               </li>
+               <li>
+                  <a href="#write"><code>write</code></a>
+               </li>
+               <li>
+                  <a href="#create_dir_all"><code>create_dir_all</code></a>
+               </li>
+               <li>
+                  <a href="#remove_dir_all"><code>remove_dir_all</code></a>
+               </li>
+               <li>
+                  <a href="#remove_file"><code>remove_file</code></a>
+               </li>
+               <li>
+                  <a href="#create_dir"><code>create_dir</code></a>
+               </li>
+               <li>
+                  <a href="#exists"><code>exists</code></a>
+               </li>
+               <li>
+                  <a href="#is_dir"><code>is_dir</code></a>
+               </li>
+               <li>
+                  <a href="#is_file"><code>is_file</code></a>
+               </li>
+               <li>
+                  <a href="#read_dir"><code>read_dir</code></a>
+               </li>
+               <li>
+                  <a href="#copy_file"><code>copy_file</code></a>
+               </li>
+               <li>
+                  <a href="#copy_dir_all"><code>copy_dir_all</code></a>
+               </li>
+               <li>
+                  <a href="#walk_dir"><code>walk_dir</code></a>
+               </li>
+               <li>
+                  <a href="#canonicalize"><code>canonicalize</code></a>
+               </li>
+               <li>
+                  <a href="#rename"><code>rename</code></a>
+               </li>
+               <li>
+                  <a href="#atomic_write"><code>atomic_write</code></a>
+               </li>
+               <li>
+                  <a href="#touch"><code>touch</code></a>
+               </li>
+               <li>
+                  <a href="#metadata"><code>metadata</code></a>
+               </li>
+               <li>
+                  <a href="#symlink_metadata"><code>symlink_metadata</code></a>
+               </li>
+               <li>
+                  <a href="#permissions"><code>permissions</code></a>
+               </li>
+               <li>
+                  <a href="#set_permissions"><code>set_permissions</code></a>
+               </li>
+               <li>
+                  <a href="#read_link"><code>read_link</code></a>
+               </li>
+               <li>
+                  <a href="#hard_link"><code>hard_link</code></a>
+               </li>
+            </ul>
+         </li>
+         <li>
+            <a href="#provided-default-methods">Provided (Default) Methods</a>
+            <ul>
+               <li>
+                  <a href="#is_symlink"><code>is_symlink</code></a>
+               </li>
+               <li>
+                  <a href="#canonicalize_or_join"
+                     ><code>canonicalize_or_join</code></a
+                  >
+               </li>
+               <li>
+                  <a href="#safe_join"><code>safe_join</code></a>
+               </li>
+               <li>
+                  <a href="#copy"><code>copy</code></a>
+               </li>
+               <li>
+                  <a href="#rename_or_copy"><code>rename_or_copy</code></a>
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <a href="#struct-realfs">Struct <code>RealFs</code></a>
+      <ul>
+         <li><a href="#implementation-details">Implementation Details</a></li>
+         <li><a href="#example-usage">Example Usage</a></li>
+      </ul>
+   </li>
+   <li><a href="#error-handling">Error Handling</a></li>
+   <li>
+      <a href="#implementing-a-custom-filesystem"
+         >Implementing a Custom <code>FileSystem</code></a
+      >
+   </li>
+   <li><a href="#security-considerations">Security Considerations</a></li>
+   <li><a href="#testing-suite-overview">Testing Suite Overview</a></li>
+   <li>
+      <a href="#complete-code-examples-from-tests"
+         >Complete Code Examples from Tests</a
+      >
+   </li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>
+   <code>librawssg_fs</code> provides a trait‑based abstraction over filesystem
+   operations. This allows static site generator components to interact with the
+   filesystem without being tightly coupled to <code>std::fs</code>. It enables:
+</p>
+<ul>
+   <li>
+      <strong>Testability</strong>: Mock filesystems can be injected in unit
+      tests.
+   </li>
+   <li>
+      <strong>Portability</strong>: Different filesystem backends (e.g.,
+      in‑memory, virtual) can implement the trait.
+   </li>
+   <li>
+      <strong>Security</strong>: Built‑in path traversal protection through
+      <code>safe_join</code> and <code>canonicalize_or_join</code>.
+   </li>
+</ul>
+<p>The crate exports:</p>
+<ul>
+   <li><code>pub trait FileSystem</code> – The main abstraction.</li>
+   <li>
+      <code>pub struct RealFs</code> – A zero‑sized type that implements
+      <code>FileSystem</code> using the real OS filesystem.
+   </li>
+</ul>
+<hr />
+<h2 id="modules">Modules</h2>
+<p>
+   The crate root (<code>lib.rs</code>) defines the
+   <code>FileSystem</code> trait and re‑exports <code>RealFs</code> from the
+   <code>real</code> module.
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">mod</span> real;
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">use</span> real::RealFs;
+</code></pre>
+<p>
+   There is also an internal module <code>real.rs</code> containing the
+   <code>RealFs</code> implementation.
+</p>
+<hr />
+<h2 id="trait-filesystem-">Trait <code>FileSystem</code></h2>
+<p>
+   The <code>FileSystem</code> trait is the core of this crate. It is
+   object‑safe and requires implementors to be <code>Send + Sync</code> (safe to
+   share across threads). The trait provides many required methods and several
+   methods with default implementations.
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">FileSystem</span></span>: <span class="hljs-built_in">Send</span> + <span class="hljs-built_in">Sync</span> {
+    <span class="hljs-comment">// Required methods (see below)</span>
+    <span class="hljs-comment">// Provided methods with default implementations</span>
+}
+</code></pre>
+<h3 id="required-methods">Required Methods</h3>
+<p>
+   These methods <strong>must</strong> be implemented by any type that
+   implements <code>FileSystem</code>. They map closely to
+   <code>std::fs</code> functions and <code>walkdir</code> functionality.
+</p>
+<h4 id="-read_to_string-"><code>read_to_string</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> read_to_string(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;String&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Reads the entire contents of a file into a
+   <code>String</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: The path to the file to read.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(String)</code> containing the file
+   contents, or an <code>Err(io::Error)</code> if the file cannot be read (e.g.,
+   not found, permission denied, invalid UTF‑8).
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-built_in">let</span> <span class="hljs-built_in">content</span> = fs.read_to_string(Path::<span class="hljs-built_in">new</span>(<span class="hljs-string">"hello.txt"</span>))?;
+</code></pre>
+<h4 id="-read_bytes-"><code>read_bytes</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> read_bytes(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;Vec&lt;u8&gt;&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Reads the entire contents of a file as raw bytes.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: The path to the file.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(Vec&lt;u8&gt;)</code> with the file bytes,
+   or an <code>Err(io::Error)</code>.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-built_in">data</span> = fs.read_bytes(Path<span class="hljs-type">::new</span>(<span class="hljs-string">"image.png"</span>))?;
+</code></pre>
+<h4 id="-write-"><code>write</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">write</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path, content: &amp;[<span class="hljs-keyword">u8</span>]) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Writes the given bytes to a file, creating any
+   necessary parent directories.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Destination file path.</li>
+   <li><code>content</code>: Bytes to write.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> on success, or
+   <code>Err(io::Error)</code> on failure (e.g., permission denied, disk full).
+</p>
+<p>
+   <strong>Behavior</strong>: The default <code>RealFs</code> implementation
+   creates parent directories before writing (via <code>create_dir_all</code> on
+   the parent). This is convenient for writing deeply nested outputs.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">fs.<span class="hljs-built_in">write</span>(Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"a/b/c.txt"</span>), b<span class="hljs-string">"hello"</span>)?;
+</code></pre>
+<h4 id="-create_dir_all-"><code>create_dir_all</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">create_dir_all</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a directory and all its missing parents.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: The directory path to create.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: Unlike <code>create_dir</code>, this does
+   <strong>not</strong> error if the directory already exists.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">fs.create_dir_all(Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"a/b/c"</span>))?;
+</code></pre>
+<h4 id="-remove_dir_all-"><code>remove_dir_all</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">remove_dir_all</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Removes a directory and all its contents
+   recursively.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Directory path to remove.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or
+   <code>Err(io::Error)</code> (e.g., directory does not exist, permission
+   denied).
+</p>
+<p><strong>Warning</strong>: This is destructive and cannot be undone.</p>
+<h4 id="-remove_file-"><code>remove_file</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">remove_file</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p><strong>Purpose</strong>: Deletes a single file.</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: File path to remove.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<h4 id="-create_dir-"><code>create_dir</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">create_dir</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a single directory. Fails if the parent
+   directory does not exist or if the directory already exists.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Directory path to create.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or
+   <code>Err(io::Error)</code> (e.g., already exists, parent missing).
+</p>
+<h4 id="-exists-"><code>exists</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">exists</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Checks whether a path exists (as a file, directory,
+   symlink, etc.).
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Path to check.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>true</code> if the path exists,
+   <code>false</code> otherwise.
+</p>
+<p>
+   <strong>Note</strong>: This method does not follow symlinks for broken
+   symlinks; it returns <code>false</code> for a broken symlink.
+</p>
+<h4 id="-is_dir-"><code>is_dir</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">is_dir</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span>;
+</code></pre>
+<p><strong>Purpose</strong>: Checks whether the path points to a directory.</p>
+<p>
+   <strong>Returns</strong>: <code>true</code> if it is a directory,
+   <code>false</code> otherwise (including if it does not exist).
+</p>
+<h4 id="-is_file-"><code>is_file</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">is_file</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Checks whether the path points to a regular file.
+</p>
+<p>
+   <strong>Returns</strong>: <code>true</code> if it is a regular file,
+   <code>false</code> otherwise.
+</p>
+<h4 id="-read_dir-"><code>read_dir</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> read_dir(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;Vec&lt;PathBuf&gt;&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Lists all entries (files and directories) directly
+   inside a directory.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Directory path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(Vec&lt;PathBuf&gt;)</code> containing the
+   full paths of all entries, or <code>Err(io::Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: The order is not guaranteed. It does not recurse into
+   subdirectories.
+</p>
+<h4 id="-copy_file-"><code>copy_file</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> copy_file(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">from:</span> &amp;Path, <span class="hljs-symbol">to:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;u64&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Copies a file from <code>from</code> to
+   <code>to</code>. If <code>to</code> already exists, it will be overwritten.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>from</code>: Source file path.</li>
+   <li><code>to</code>: Destination file path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(u64)</code> with the number of bytes
+   copied, or <code>Err(io::Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: Does not create parent directories of
+   <code>to</code> in the default <code>RealFs</code>; use <code>copy</code> or
+   <code>copy_dir_all</code> for that.
+</p>
+<h4 id="-copy_dir_all-"><code>copy_dir_all</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">copy_dir_all</span></span>(&amp;<span class="hljs-keyword">self</span>, from: &amp;Path, to: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Recursively copies a directory tree from
+   <code>from</code> to <code>to</code>. Creates the destination directory and
+   all parent directories as needed.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>from</code>: Source directory path.</li>
+   <li><code>to</code>: Destination directory path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p><strong>Behavior</strong>:</p>
+<ol>
+   <li>Creates <code>to</code> directory.</li>
+   <li>Walks all files in <code>from</code> (using <code>walk_dir</code>).</li>
+   <li>
+      For each file, computes relative path and creates parent directories in
+      <code>to</code>, then copies the file.
+   </li>
+</ol>
+<h4 id="-walk_dir-"><code>walk_dir</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> walk_dir(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">root:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;Vec&lt;PathBuf&gt;&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Recursively collects all
+   <strong>files</strong> under <code>root</code>. Does not include directories
+   or symlinks to directories.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>root</code>: Root directory to traverse.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(Vec&lt;PathBuf&gt;)</code> with the full
+   paths of all files, or <code>Err(io::Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: The default <code>RealFs</code> uses the
+   <code>walkdir</code> crate to handle traversal. It follows symlinks? (The
+   <code>WalkDir::new</code> default does not follow symlinks; it will include
+   symlinks but not traverse into them unless
+   <code>.follow_links(true)</code> is set. Here symlinks to files will be
+   included? <code>entry.file_type().is_file()</code> will be true for a symlink
+   to a file? Actually <code>file_type()</code> returns the type of the symlink
+   itself, not the target, unless <code>follow_links</code> is used. So symlinks
+   are not considered files and are skipped.)
+</p>
+<h4 id="-canonicalize-"><code>canonicalize</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> canonicalize(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;PathBuf&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Returns the canonical, absolute form of a path,
+   resolving all symbolic links and normalizing <code>.</code> and
+   <code>..</code> components.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: The path to canonicalize.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(PathBuf)</code> with the canonical path,
+   or <code>Err(io::Error)</code> (e.g., path does not exist).
+</p>
+<h4 id="-rename-"><code>rename</code></h4>
+<pre><code class="lang-rust">fn <span class="hljs-keyword">rename</span>(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-keyword">from</span>: &amp;<span class="hljs-keyword">Path</span>, <span class="hljs-keyword">to</span>: &amp;<span class="hljs-keyword">Path</span>) -&gt; io::<span class="hljs-keyword">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Renames (moves) a file or directory from
+   <code>from</code> to <code>to</code>. On most filesystems this is an atomic
+   operation when source and destination are on the same filesystem.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>from</code>: Source path.</li>
+   <li><code>to</code>: Destination path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: If <code>to</code> exists, it may be overwritten
+   (platform‑dependent). Does not work across different mount points (returns
+   <code>CrossesDevices</code> error).
+</p>
+<h4 id="-atomic_write-"><code>atomic_write</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">atomic_write</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path, content: &amp;[<span class="hljs-keyword">u8</span>]) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Writes data to a file atomically by first writing
+   to a temporary file and then renaming it over the target path.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Destination file path.</li>
+   <li><code>content</code>: Bytes to write.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p><strong>Behavior</strong>:</p>
+<ol>
+   <li>
+      Creates a temporary file with extension <code>.tmp</code> (by calling
+      <code>with_extension(&quot;tmp&quot;)</code> on the target path).
+   </li>
+   <li>
+      Writes the content to the temporary file (using <code>write</code>, which
+      creates parent directories).
+   </li>
+   <li>
+      Renames the temporary file to the target path (using <code>rename</code>).
+   </li>
+   <li>
+      If the rename fails, attempts to remove the temporary file and returns the
+      error.
+   </li>
+</ol>
+<p>
+   <strong>Note</strong>: The temporary file name is derived from the target; it
+   is not a hidden file and may collide if multiple writes happen concurrently
+   to the same path. This is a best‑effort atomic write suitable for many use
+   cases.
+</p>
+<h4 id="-touch-"><code>touch</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">touch</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates an empty file at <code>path</code> or
+   updates its access/modification timestamp if it already exists.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: File path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p><strong>Behavior</strong>:</p>
+<ol>
+   <li>Creates parent directories (like <code>write</code>).</li>
+   <li>Opens the file in append/create mode, which creates it if missing.</li>
+   <li>
+      Calls <code>sync_all()</code> to flush to disk (optional, but ensures
+      metadata is updated).
+   </li>
+</ol>
+<p><strong>Note</strong>: Existing file content is preserved.</p>
+<h4 id="-metadata-"><code>metadata</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> metadata(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;std</span><span class="hljs-symbol">:</span><span class="hljs-symbol">:fs</span><span class="hljs-symbol">:</span><span class="hljs-symbol">:Metadata&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Returns metadata for a file or directory, following
+   symlinks.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Path to query.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(fs::Metadata)</code> or
+   <code>Err(io::Error)</code>.
+</p>
+<h4 id="-symlink_metadata-"><code>symlink_metadata</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> symlink_metadata(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;std</span><span class="hljs-symbol">:</span><span class="hljs-symbol">:fs</span><span class="hljs-symbol">:</span><span class="hljs-symbol">:Metadata&gt;</span>;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Returns metadata for a path
+   <strong>without</strong> following symlinks (i.e., metadata of the symlink
+   itself).
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Path to query.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(fs::Metadata)</code> or
+   <code>Err(io::Error)</code>.
+</p>
+<h4 id="-permissions-"><code>permissions</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> permissions(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;std</span><span class="hljs-symbol">:</span><span class="hljs-symbol">:fs</span><span class="hljs-symbol">:</span><span class="hljs-symbol">:Permissions&gt;</span>;
+</code></pre>
+<p><strong>Purpose</strong>: Reads the permissions of a file or directory.</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Path to query.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(fs::Permissions)</code> or
+   <code>Err(io::Error)</code>.
+</p>
+<p>
+   <strong>Note</strong>: The default <code>RealFs</code> obtains permissions
+   from <code>metadata</code>, which follows symlinks.
+</p>
+<h4 id="-set_permissions-"><code>set_permissions</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">set_permissions</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path, permissions: std::fs::Permissions) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p><strong>Purpose</strong>: Sets the permissions of a file or directory.</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Target path.</li>
+   <li><code>permissions</code>: New permissions.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<h4 id="-read_link-"><code>read_link</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> read_link(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">path:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;PathBuf&gt;</span>;
+</code></pre>
+<p><strong>Purpose</strong>: Reads the target of a symbolic link.</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>path</code>: Path to the symlink.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(PathBuf)</code> containing the link
+   target, or <code>Err(io::Error)</code> if the path is not a symlink or does
+   not exist.
+</p>
+<h4 id="-hard_link-"><code>hard_link</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">hard_link</span></span>(&amp;<span class="hljs-keyword">self</span>, from: &amp;Path, to: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Creates a hard link from <code>from</code> to
+   <code>to</code>.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>from</code>: Existing file path.</li>
+   <li><code>to</code>: New hard link path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p><strong>Note</strong>: Both paths must be on the same filesystem.</p>
+<hr />
+<h3 id="provided-default-methods">Provided (Default) Methods</h3>
+<p>
+   These methods have default implementations that rely on the required methods.
+   Implementors may override them for performance or platform‑specific behavior.
+</p>
+<h4 id="-is_symlink-"><code>is_symlink</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">is_symlink</span></span>(&amp;<span class="hljs-keyword">self</span>, path: &amp;Path) -&gt; <span class="hljs-keyword">bool</span> {
+    <span class="hljs-keyword">self</span>.symlink_metadata(path)
+        .is_ok_and(|meta| meta.file_type().is_symlink())
+}
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Checks whether the given path is a symbolic link.
+</p>
+<p>
+   <strong>Returns</strong>: <code>true</code> if the path is a symlink (even if
+   broken), <code>false</code> otherwise.
+</p>
+<p>
+   <strong>Implementation</strong>: Uses <code>symlink_metadata</code> (which
+   does not follow symlinks) and checks the file type.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">if</span> fs.is_symlink(Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"link"</span>)) { ... }
+</code></pre>
+<h4 id="-canonicalize_or_join-"><code>canonicalize_or_join</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> canonicalize_or_join(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">base:</span> &amp;Path, <span class="hljs-symbol">candidate:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;PathBuf&gt;</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Safely resolves a possibly non‑existent path
+   relative to <code>base</code>. If the joined path exists, it is
+   canonicalized; otherwise it returns the canonical parent joined with the file
+   name, after normalizing <code>.</code> and <code>..</code> components.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>base</code>: The base directory (usually already canonical).</li>
+   <li>
+      <code>candidate</code>: A relative path (may contain <code>.</code> and
+      <code>..</code>).
+   </li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(PathBuf)</code> with the resolved path, or
+   <code>Err(io::Error)</code> if path traversal is detected or other errors
+   occur.
+</p>
+<p><strong>Detailed Behavior</strong>:</p>
+<ol>
+   <li>
+      Normalizes the <code>candidate</code> path by iterating over its
+      components:
+      <ul>
+         <li><code>CurDir</code> (<code>.</code>) is ignored.</li>
+         <li>
+            <code>ParentDir</code> (<code>..</code>) causes the last normal
+            component to be popped. If there is no previous normal component
+            (i.e., attempt to go above root), it returns
+            <code>PermissionDenied</code> with message
+            <code>&quot;path traversal detected&quot;</code>.
+         </li>
+         <li>
+            <code>Prefix</code> and <code>RootDir</code> components are pushed
+            (though they are unusual for relative candidates and may cause
+            issues later).
+         </li>
+         <li><code>Normal</code> components are pushed.</li>
+      </ul>
+   </li>
+   <li>Joins the normalized candidate with <code>base</code>.</li>
+   <li>
+      If the joined path exists, canonicalizes it (resolving symlinks, etc.).
+   </li>
+   <li>
+      If it does not exist:
+      <ul>
+         <li>Canonicalizes the parent directory of the joined path.</li>
+         <li>
+            Appends the file name of the joined path to the canonical parent.
+         </li>
+         <li>Returns that path.</li>
+      </ul>
+   </li>
+</ol>
+<p>
+   <strong>Security</strong>: This method prevents <code>..</code> from escaping
+   the base directory (unless there are symlinks that point outside;
+   canonicalization of existing paths can still lead outside base, which is why
+   <code>safe_join</code> adds an extra check). For non‑existent paths, the
+   parent canonicalization ensures that the final path is within the canonical
+   base.
+</p>
+<p><strong>Example</strong> (from tests):</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> existing = <span class="hljs-keyword">base</span>.join(<span class="hljs-string">"existing.txt"</span>);
+fs.write(&amp;existing, b<span class="hljs-string">"data"</span>)?;
+
+<span class="hljs-keyword">let</span> canon_existing = fs.canonicalize_or_join(<span class="hljs-keyword">base</span>, Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"existing.txt"</span>))?;
+<span class="hljs-keyword">let</span> canon_direct = fs.canonicalize(&amp;existing)?;
+assert_eq!(canon_existing, canon_direct);
+
+<span class="hljs-keyword">let</span> missing = Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"missing.txt"</span>);
+<span class="hljs-keyword">let</span> canon_missing = fs.canonicalize_or_join(<span class="hljs-keyword">base</span>, missing)?;
+<span class="hljs-keyword">let</span> canon_base = fs.canonicalize(<span class="hljs-keyword">base</span>)?;
+assert_eq!(canon_missing, canon_base.join(missing));
+</code></pre>
+<h4 id="-safe_join-"><code>safe_join</code></h4>
+<pre><code class="lang-rust"><span class="hljs-keyword">fn</span> safe_join(&amp;<span class="hljs-keyword">self</span>, <span class="hljs-symbol">base:</span> &amp;Path, <span class="hljs-symbol">candidate:</span> &amp;Path) -&gt; <span class="hljs-symbol">io:</span><span class="hljs-symbol">:Result&lt;PathBuf&gt;</span>
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Safely joins a candidate path to a base directory,
+   ensuring the result is <strong>within</strong> the base directory (no path
+   traversal). This is the recommended way to compute destination paths for
+   user‑provided or untrusted relative paths.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li>
+      <code>base</code>: The base directory (can be relative; it will be
+      canonicalized internally).
+   </li>
+   <li>
+      <code>candidate</code>: A relative path (may contain <code>.</code> and
+      <code>..</code>).
+   </li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(PathBuf)</code> with the resolved path,
+   guaranteed to start with the canonical base. Returns
+   <code>Err(io::Error)</code> with <code>PermissionDenied</code> if the
+   resolved path escapes the base (e.g.,
+   <code>candidate = &quot;../secret&quot;</code>).
+</p>
+<p><strong>Implementation Details</strong>:</p>
+<ol>
+   <li>Canonicalizes <code>base</code>.</li>
+   <li>
+      Calls <code>canonicalize_or_join</code> with the canonical base and
+      <code>candidate</code>.
+   </li>
+   <li>
+      Checks that the resulting path starts with the canonical base. If not,
+      returns <code>PermissionDenied</code>.
+   </li>
+</ol>
+<p>
+   <strong>Why needed</strong>: Although
+   <code>canonicalize_or_join</code> prevents simple <code>..</code> traversal,
+   symlinks inside the base directory could cause a resolved path to point
+   outside the base even after normalization. The <code>starts_with</code> check
+   enforces containment.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-keyword">base</span> = tmp.path().join(<span class="hljs-string">"base"</span>);
+fs.create_dir_all(&amp;<span class="hljs-keyword">base</span>)?;
+
+<span class="hljs-keyword">let</span> safe = fs.safe_join(&amp;<span class="hljs-keyword">base</span>, Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"inside.txt"</span>))?;
+<span class="hljs-keyword">assert</span>!(safe.starts_with(&amp;<span class="hljs-keyword">base</span>));
+
+<span class="hljs-keyword">let</span> traversal = Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"../escape.txt"</span>);
+<span class="hljs-keyword">let</span> result = fs.safe_join(&amp;<span class="hljs-keyword">base</span>, traversal);
+<span class="hljs-keyword">assert</span>!(result.is_err());
+</code></pre>
+<h4 id="-copy-"><code>copy</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">copy</span></span>(&amp;<span class="hljs-keyword">self</span>, from: &amp;Path, to: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Copies a file or directory from
+   <code>from</code> to <code>to</code>. If <code>from</code> is a directory, it
+   recursively copies the whole tree; if it is a file, it performs a single file
+   copy.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>from</code>: Source path.</li>
+   <li><code>to</code>: Destination path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">if</span> <span class="hljs-built_in">self</span>.is_dir(from) {
+    <span class="hljs-built_in">self</span>.copy_dir_all(from, <span class="hljs-keyword">to</span>)
+} <span class="hljs-keyword">else</span> {
+    <span class="hljs-built_in">self</span>.copy_file(from, <span class="hljs-keyword">to</span>).<span class="hljs-built_in">map</span>(|_| ())
+}
+</code></pre>
+<p>
+   <strong>Note</strong>: Does not create parent directories of
+   <code>to</code> for file copies (unless <code>copy_file</code> implementation
+   does; the default <code>RealFs::copy_file</code> does not). For directories,
+   <code>copy_dir_all</code> does create <code>to</code> and parents as needed.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust"><span class="hljs-built_in">fs</span>.<span class="hljs-built_in">copy</span>(&amp;src_file, &amp;dst_file)?;
+<span class="hljs-built_in">fs</span>.<span class="hljs-built_in">copy</span>(&amp;src_dir, &amp;dst_dir)?;
+</code></pre>
+<h4 id="-rename_or_copy-"><code>rename_or_copy</code></h4>
+<pre><code class="lang-rust"><span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">rename_or_copy</span></span>(&amp;<span class="hljs-keyword">self</span>, from: &amp;Path, to: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;()&gt;
+</code></pre>
+<p>
+   <strong>Purpose</strong>: Attempts to rename <code>from</code> to
+   <code>to</code>. If the rename fails with
+   <code>ErrorKind::CrossesDevices</code> (i.e., source and destination are on
+   different filesystems), it falls back to copying the directory tree and then
+   removing the source.
+</p>
+<p><strong>Parameters</strong>:</p>
+<ul>
+   <li><code>from</code>: Source path.</li>
+   <li><code>to</code>: Destination path.</li>
+</ul>
+<p>
+   <strong>Returns</strong>: <code>Ok(())</code> or <code>Err(io::Error)</code>.
+</p>
+<p><strong>Behavior</strong>:</p>
+<ol>
+   <li>Try <code>rename(from, to)</code>.</li>
+   <li>If success, return <code>Ok(())</code>.</li>
+   <li>
+      If error kind is <code>CrossesDevices</code>:
+      <ul>
+         <li><code>copy_dir_all(from, to)</code> to copy contents.</li>
+         <li><code>remove_dir_all(from)</code> to delete source.</li>
+         <li>Return <code>Ok(())</code>.</li>
+      </ul>
+   </li>
+   <li>Otherwise, return the original error.</li>
+</ol>
+<p>
+   <strong>Note</strong>: The fallback only works for directories (as the code
+   uses <code>copy_dir_all</code> and <code>remove_dir_all</code>). For a file
+   across devices, this will likely fail. This method is useful for moving
+   directories across mount points.
+</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-rust">fs.rename_or_copy(<span class="hljs-variable">&amp;src_dir</span>, <span class="hljs-variable">&amp;dst_dir</span>)?;
+</code></pre>
+<hr />
+<h2 id="struct-realfs-">Struct <code>RealFs</code></h2>
+<p>
+   <code>RealFs</code> is a zero‑sized struct that implements
+   <code>FileSystem</code> by delegating directly to the operating system’s
+   filesystem APIs.
+</p>
+<pre><code class="lang-rust"><span class="hljs-meta">#[derive(Debug, Default, Clone, Copy)]</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">RealFs</span></span>;
+</code></pre>
+<p>
+   It has no fields and can be instantiated with <code>RealFs</code> or
+   <code>RealFs::default()</code>.
+</p>
+<h3 id="implementation-details">Implementation Details</h3>
+<p><code>RealFs</code> uses:</p>
+<ul>
+   <li><code>std::fs</code> for most operations.</li>
+   <li><code>walkdir::WalkDir</code> for <code>walk_dir</code>.</li>
+   <li>
+      The <code>tracing::instrument</code> attribute is applied to most methods
+      for logging (though <code>tracing</code> is not enabled by default; it can
+      be used with a subscriber).
+   </li>
+</ul>
+<p>
+   All methods follow the behavior described in the trait definitions. The
+   <code>write</code> method creates parent directories before writing, and
+   <code>atomic_write</code> uses a temporary <code>.tmp</code> file.
+</p>
+<h3 id="example-usage">Example Usage</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_fs::{FileSystem, RealFs};
+<span class="hljs-keyword">use</span> std::path::Path;
+
+<span class="hljs-keyword">let</span> fs = RealFs;
+
+<span class="hljs-comment">// Write a file</span>
+fs.write(Path::new(<span class="hljs-string">"output/file.txt"</span>), <span class="hljs-string">b"Hello"</span>)?;
+
+<span class="hljs-comment">// Read it back</span>
+<span class="hljs-keyword">let</span> content = fs.read_to_string(Path::new(<span class="hljs-string">"output/file.txt"</span>))?;
+<span class="hljs-built_in">assert_eq!</span>(content, <span class="hljs-string">"Hello"</span>);
+
+<span class="hljs-comment">// Create directory</span>
+fs.create_dir_all(Path::new(<span class="hljs-string">"output/sub"</span>))?;
+
+<span class="hljs-comment">// Copy directory</span>
+fs.copy_dir_all(Path::new(<span class="hljs-string">"output"</span>), Path::new(<span class="hljs-string">"backup"</span>))?;
+</code></pre>
+<hr />
+<h2 id="error-handling">Error Handling</h2>
+<p>
+   All methods that can fail return <code>io::Result&lt;T&gt;</code> (i.e.,
+   <code>Result&lt;T, std::io::Error&gt;</code>). This is the standard error
+   type from the standard library, so no custom error enum is defined in this
+   crate. Consumers can inspect the error kind (e.g.,
+   <code>ErrorKind::NotFound</code>, <code>PermissionDenied</code>,
+   <code>CrossesDevices</code>) to handle specific failures.
+</p>
+<p>
+   The provided security methods (<code>canonicalize_or_join</code> and
+   <code>safe_join</code>) return <code>io::Error</code> with
+   <code>ErrorKind::PermissionDenied</code> when path traversal is detected,
+   along with the message <code>&quot;path traversal detected&quot;</code>.
+</p>
+<hr />
+<h2 id="implementing-a-custom-filesystem-">
+   Implementing a Custom <code>FileSystem</code>
+</h2>
+<p>
+   To create a mock filesystem or an alternative backend, implement the
+   <code>FileSystem</code> trait. You must provide implementations for all 24
+   required methods. The provided methods can be left as default unless you need
+   custom behavior.
+</p>
+<p><strong>Example of a minimal mock</strong> (from tests, adapted):</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_fs::FileSystem;
+<span class="hljs-keyword">use</span> std::io;
+<span class="hljs-keyword">use</span> std::path::{Path, PathBuf};
+
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">DummyFs</span></span>;
+
+<span class="hljs-keyword">impl</span> FileSystem <span class="hljs-keyword">for</span> DummyFs {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">read_to_string</span></span>(&amp;<span class="hljs-keyword">self</span>, _path: &amp;Path) -&gt; io::<span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">String</span>&gt; {
+        <span class="hljs-literal">Err</span>(io::Error::other(<span class="hljs-string">"not implemented"</span>))
+    }
+    <span class="hljs-comment">// ... implement all other required methods similarly</span>
+    <span class="hljs-comment">// (returning Err or trivial values)</span>
+}
+</code></pre>
+<p>
+   Because <code>FileSystem</code> is <code>Send + Sync</code>, your mock must
+   also be thread‑safe. In practice, you can use <code>Arc</code> or interior
+   mutability if state is needed.
+</p>
+<hr />
+<h2 id="security-considerations">Security Considerations</h2>
+<p>
+   The library includes two methods specifically designed to prevent path
+   traversal attacks:
+</p>
+<ul>
+   <li>
+      <strong><code>canonicalize_or_join</code></strong
+      >: Normalizes <code>..</code> and <code>.</code> and ensures the final
+      path does not go above the base (in terms of lexical components). However,
+      it may still follow symlinks that point outside the base if the path
+      exists.
+   </li>
+   <li>
+      <strong><code>safe_join</code></strong
+      >: Combines <code>canonicalize_or_join</code> with a
+      <code>starts_with</code> check on the canonical base, providing a stronger
+      guarantee that the result is contained within the base directory.
+   </li>
+</ul>
+<p>
+   <strong>Recommendation</strong>: Always use <code>safe_join</code> when
+   constructing output paths from untrusted input (e.g., user‑supplied relative
+   URLs). Avoid using <code>join</code> directly followed by canonicalization
+   without containment checks.
+</p>
+<hr />
+<h2 id="testing-suite-overview">Testing Suite Overview</h2>
+<p>
+   The test file <code>tests/filesystem.rs</code> contains comprehensive tests
+   for <code>RealFs</code> and the provided methods. It uses
+   <code>tempfile::TempDir</code> to create isolated temporary directories. The
+   tests cover:
+</p>
+<ul>
+   <li>Basic read/write operations (string and bytes)</li>
+   <li>Creating directories and files</li>
+   <li>Error cases for non‑existent paths</li>
+   <li>
+      <code>copy_file</code>, <code>copy_dir_all</code>, <code>rename</code>,
+      <code>remove_file</code>, <code>remove_dir_all</code>
+   </li>
+   <li><code>atomic_write</code> (including nested paths and overwriting)</li>
+   <li><code>touch</code> (creating new and preserving existing content)</li>
+   <li><code>walk_dir</code> (recursive collection)</li>
+   <li><code>canonicalize_or_join</code> (existing and missing paths)</li>
+   <li>
+      <code>safe_join</code> (rejecting traversal, allowing dot segments inside)
+   </li>
+   <li>Metadata and permissions</li>
+   <li>Symlink and hard link operations (Unix only)</li>
+</ul>
+<p>All tests can be run with <code>cargo test</code>.</p>
+<hr />
+<h2 id="complete-code-examples-from-tests">
+   Complete Code Examples from Tests
+</h2>
+<p>
+   Below are selected examples from the test suite that illustrate common usage
+   patterns. They can be copied and adapted.
+</p>
+<h3 id="writing-and-reading-a-string">Writing and Reading a String</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg_fs::{FileSystem, RealFs};
+<span class="hljs-keyword">use</span> std::path::Path;
+<span class="hljs-keyword">use</span> tempfile::TempDir;
+
+<span class="hljs-keyword">let</span> tmp = TempDir::new().unwrap();
+<span class="hljs-keyword">let</span> fs = RealFs;
+<span class="hljs-keyword">let</span> file_path = tmp.path().join(<span class="hljs-string">"hello.txt"</span>);
+
+fs.write(&amp;file_path, <span class="hljs-string">b"world"</span>).unwrap();
+<span class="hljs-keyword">let</span> content = fs.read_to_string(&amp;file_path).unwrap();
+<span class="hljs-built_in">assert_eq!</span>(content, <span class="hljs-string">"world"</span>);
+</code></pre>
+<h3 id="atomic-write-overwriting">Atomic Write Overwriting</h3>
+<pre><code class="lang-rust">let <span class="hljs-keyword">file</span> = tmp.path().<span class="hljs-keyword">join</span>(<span class="hljs-string">"atomic.txt"</span>);
+fs.atomic_write(&amp;<span class="hljs-keyword">file</span>, b<span class="hljs-string">"first"</span>).unwrap();
+fs.atomic_write(&amp;<span class="hljs-keyword">file</span>, b<span class="hljs-string">"second"</span>).unwrap();
+let content = fs.read_to_string(&amp;<span class="hljs-keyword">file</span>).unwrap();
+assert_eq!(content, <span class="hljs-string">"second"</span>);
+</code></pre>
+<h3 id="safe-join-blocking-traversal">Safe Join Blocking Traversal</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> <span class="hljs-keyword">base</span> = tmp.path().join(<span class="hljs-string">"base"</span>);
+fs.create_dir_all(&amp;<span class="hljs-keyword">base</span>).unwrap();
+
+<span class="hljs-keyword">let</span> safe = fs.safe_join(&amp;<span class="hljs-keyword">base</span>, Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"inside.txt"</span>)).unwrap();
+<span class="hljs-keyword">assert</span>!(safe.starts_with(&amp;<span class="hljs-keyword">base</span>));
+
+<span class="hljs-keyword">let</span> traversal = Path::<span class="hljs-keyword">new</span>(<span class="hljs-string">"../escape.txt"</span>);
+<span class="hljs-keyword">assert</span>!(fs.safe_join(&amp;<span class="hljs-keyword">base</span>, traversal).is_err());
+</code></pre>
+<h3 id="copying-a-directory-recursively">Copying a Directory Recursively</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> src = tmp.path().<span class="hljs-built_in">join</span>(<span class="hljs-string">"src_dir"</span>);
+<span class="hljs-keyword">let</span> dst = tmp.path().<span class="hljs-built_in">join</span>(<span class="hljs-string">"dst_dir"</span>);
+fs.create_dir_all(&amp;src.<span class="hljs-built_in">join</span>(<span class="hljs-string">"nested"</span>)).unwrap();
+fs.write(&amp;src.<span class="hljs-built_in">join</span>(<span class="hljs-string">"file1.txt"</span>), b<span class="hljs-string">"one"</span>).unwrap();
+fs.write(&amp;src.<span class="hljs-built_in">join</span>(<span class="hljs-string">"nested"</span>).<span class="hljs-built_in">join</span>(<span class="hljs-string">"file2.txt"</span>), b<span class="hljs-string">"two"</span>).unwrap();
+
+fs.copy_dir_all(&amp;src, &amp;dst).unwrap();
+<span class="hljs-built_in">assert</span>!(fs.exists(&amp;dst.<span class="hljs-built_in">join</span>(<span class="hljs-string">"file1.txt"</span>)));
+<span class="hljs-built_in">assert</span>!(fs.exists(&amp;dst.<span class="hljs-built_in">join</span>(<span class="hljs-string">"nested"</span>).<span class="hljs-built_in">join</span>(<span class="hljs-string">"file2.txt"</span>)));
+</code></pre>
+<h3 id="using-walk_dir-to-gather-all-files">
+   Using <code>walk_dir</code> to Gather All Files
+</h3>
+<pre><code class="lang-rust"><span class="hljs-keyword">let</span> root = tmp.path().<span class="hljs-built_in">join</span>(<span class="hljs-string">"root"</span>);
+fs.create_dir_all(&amp;root.<span class="hljs-built_in">join</span>(<span class="hljs-string">"sub"</span>)).unwrap();
+fs.write(&amp;root.<span class="hljs-built_in">join</span>(<span class="hljs-string">"root.txt"</span>), b<span class="hljs-string">"root"</span>).unwrap();
+fs.write(&amp;root.<span class="hljs-built_in">join</span>(<span class="hljs-string">"sub"</span>).<span class="hljs-built_in">join</span>(<span class="hljs-string">"sub.txt"</span>), b<span class="hljs-string">"sub"</span>).unwrap();
+
+<span class="hljs-keyword">let</span> files = fs.walk_dir(&amp;root).unwrap();
+assert_eq!(files.<span class="hljs-built_in">len</span>(), <span class="hljs-number">2</span>);
+</code></pre>
+<hr />
+<h2 id="summary">Summary</h2>
+<p>
+   <code>librawssg_fs</code> provides a robust, thread‑safe filesystem
+   abstraction with built‑in path traversal protection and convenience methods
+   for atomic operations and cross‑device moves. The
+   <code>RealFs</code> implementation is ready to use, and the trait enables
+   easy mocking for unit tests. The extensive test suite validates all features
+   and serves as living documentation.
+</p>
+<p>For any additional details, refer to the source code and inline comments.</p>

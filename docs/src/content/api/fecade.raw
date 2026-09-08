@@ -1,0 +1,1198 @@
+<h1 id="librawssg">librawssg</h1>
+<p>A modular static site generator library for Rust.</p>
+<p>
+   This facade crate re‑exports the essential building blocks from the
+   <code>librawssg</code> ecosystem, providing a single convenient entry point
+   for building static site generators. It aggregates configuration management,
+   filesystem abstraction, content processing, template rendering (with Tera
+   built‑in), and build pipeline orchestration.
+</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+   <li><a href="#overview">Overview</a></li>
+   <li><a href="#installation">Installation</a></li>
+   <li><a href="#modules">Modules</a></li>
+   <li>
+      <a href="#core-types-and-traits">Core Types and Traits</a>
+      <ul>
+         <li><a href="#configuration">Configuration</a></li>
+         <li><a href="#filesystem">Filesystem</a></li>
+         <li><a href="#content-handling">Content Handling</a></li>
+         <li><a href="#template-rendering">Template Rendering</a></li>
+         <li><a href="#compiler-pipeline">Compiler Pipeline</a></li>
+         <li><a href="#error-handling">Error Handling</a></li>
+      </ul>
+   </li>
+   <li><a href="#usage-example">Usage Example</a></li>
+   <li>
+      <a href="#full-api-reference">Full API Reference</a>
+      <ul>
+         <li><a href="#configuration-types">Configuration Types</a></li>
+         <li><a href="#filesystem-types">Filesystem Types</a></li>
+         <li><a href="#handler-types">Handler Types</a></li>
+         <li><a href="#template-types">Template Types</a></li>
+         <li><a href="#compiler-types">Compiler Types</a></li>
+         <li><a href="#error-types">Error Types</a></li>
+      </ul>
+   </li>
+   <li><a href="#feature-flags">Feature Flags</a></li>
+   <li><a href="#license">License</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>
+   <code>librawssg</code> is the top‑level crate that brings together six
+   specialized crates:
+</p>
+<ul>
+   <li>
+      <strong><code>librawssg_config</code></strong> – Configuration data
+      structures and validation.
+   </li>
+   <li>
+      <strong><code>librawssg_fs</code></strong> – Trait‑based filesystem
+      abstraction with path traversal protection.
+   </li>
+   <li>
+      <strong><code>librawssg_handler</code></strong> – Core document and
+      metadata types, plus the <code>Processor</code> trait.
+   </li>
+   <li>
+      <strong><code>librawssg_templates</code></strong> – Rendering traits
+      (<code>Renderer</code>, <code>RenderContext</code>) and a Tera
+      implementation.
+   </li>
+   <li>
+      <strong><code>librawssg_compiler</code></strong> – Build pipeline
+      orchestration.
+   </li>
+   <li>
+      <strong><code>librawssg_error</code></strong> – Unified error enum and
+      <code>Result</code> alias.
+   </li>
+</ul>
+<p>
+   By depending on <code>librawssg</code>, you get all these components without
+   needing to specify each one individually. The facade also re‑exports the most
+   commonly used types at the crate root for ergonomic access.
+</p>
+<hr />
+<h2 id="installation">Installation</h2>
+<p>Add <code>librawssg</code> to your <code>Cargo.toml</code>:</p>
+<pre><code class="lang-toml"><span class="hljs-section">[dependencies]</span>
+<span class="hljs-attr">librawssg</span> = <span class="hljs-string">"1.0.0"</span>
+</code></pre>
+<p>
+   If you are working in the same workspace as the
+   <code>librawssg</code> source, you can use a path dependency:
+</p>
+<pre><code class="lang-toml"><span class="hljs-section">[dependencies]</span>
+<span class="hljs-attr">librawssg</span> = { path = <span class="hljs-string">"../librawssg"</span> }
+</code></pre>
+<p>The crate is compatible with Rust edition 2024 and later.</p>
+<hr />
+<h2 id="modules">Modules</h2>
+<p>The crate organises its re‑exports into submodules for clarity:</p>
+<ul>
+   <li>
+      <strong><code>librawssg::config</code></strong> – Configuration types
+      (<code>Config</code>, <code>SiteConfig</code>, <code>BuildConfig</code>,
+      <code>ContentRule</code>, <code>NavItem</code>).
+   </li>
+   <li>
+      <strong><code>librawssg::fs</code></strong> – Filesystem trait and
+      <code>RealFs</code>.
+   </li>
+   <li>
+      <strong><code>librawssg::handler</code></strong> – Document, metadata, and
+      processor contracts.
+   </li>
+   <li>
+      <strong><code>librawssg::templates</code></strong> – Rendering traits and
+      <code>TeraRenderer</code>.
+   </li>
+   <li>
+      <strong><code>librawssg::compiler</code></strong> – Pipeline builder,
+      pipeline, context builders, generators.
+   </li>
+   <li>
+      <strong><code>librawssg::error</code></strong> – Error type and
+      <code>Result</code> alias.
+   </li>
+</ul>
+<p>
+   Additionally, the most important types are also re‑exported directly at the
+   crate root for convenience.
+</p>
+<hr />
+<h2 id="core-types-and-traits">Core Types and Traits</h2>
+<h3 id="configuration">Configuration</h3>
+<p>
+   The configuration system revolves around the <code>Config</code> struct,
+   which contains site settings, build paths, and content processing rules.
+</p>
+<ul>
+   <li>
+      <p>
+         <strong><code>Config</code></strong> – Top‑level configuration.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>site: SiteConfig</code>,
+            <code>build: BuildConfig</code>,
+            <code>content_rules: Vec&lt;ContentRule&gt;</code>,
+            <code>extra: HashMap&lt;String, serde_json::Value&gt;</code>.
+         </li>
+         <li>
+            <strong>Constructors</strong>:
+            <ul>
+               <li><code>Config::new() -&gt; Config</code></li>
+               <li><code>Config::default() -&gt; Config</code></li>
+            </ul>
+         </li>
+         <li>
+            <strong>Builder method</strong>:
+            <code
+               >with_site_name(name: impl Into&lt;String&gt;) -&gt; Self</code
+            >
+         </li>
+         <li>
+            <strong>Rule management</strong>:
+            <ul>
+               <li>
+                  <code
+                     >add_content_rule(&amp;mut self, rule: ContentRule)</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >find_rule_by_name(&amp;self, name: &amp;str) -&gt;
+                     Option&lt;&amp;ContentRule&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >remove_rule_by_name(&amp;mut self, name: &amp;str) -&gt;
+                     Option&lt;ContentRule&gt;</code
+                  >
+               </li>
+               <li>
+                  <code>has_duplicate_rule_names(&amp;self) -&gt; bool</code>
+               </li>
+            </ul>
+         </li>
+         <li>
+            <strong>Validation</strong>:
+            <code>validate(&amp;self) -&gt; Result&lt;()&gt;</code>
+         </li>
+         <li>
+            <strong>Serialization</strong>:
+            <ul>
+               <li>
+                  <code
+                     >from_yaml_str(yaml: &amp;str) -&gt;
+                     Result&lt;Self&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >to_yaml_string(&amp;self) -&gt; Result&lt;String&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >from_json_str(json: &amp;str) -&gt;
+                     Result&lt;Self&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >to_json_string(&amp;self) -&gt; Result&lt;String&gt;</code
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>SiteConfig</code></strong> – Global site metadata.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>navbar</code>, <code>sidebar</code>,
+            <code>site_name</code>, <code>description</code>,
+            <code>language</code>, <code>base_url</code>, <code>author</code>,
+            <code>repo_url</code>, <code>license</code>, <code>extra</code>.
+         </li>
+         <li>
+            <strong>Constructors</strong>:
+            <code
+               >SiteConfig::new(site_name: impl Into&lt;String&gt;) -&gt;
+               Self</code
+            >, <code>SiteConfig::default()</code>.
+         </li>
+         <li>
+            <strong>Defaults</strong>:
+            <code>site_name = &quot;librawssg&quot;</code>,
+            <code>language = Some(&quot;en&quot;)</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>BuildConfig</code></strong> – Filesystem path settings.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>content_dir</code>,
+            <code>output_dir</code>, <code>templates_dir</code>,
+            <code>static_dir</code>.
+         </li>
+         <li>
+            <strong>Constructors</strong>: <code>BuildConfig::new()</code>,
+            <code>BuildConfig::default()</code>.
+         </li>
+         <li>
+            <strong>Defaults</strong>: <code>&quot;content&quot;</code>,
+            <code>&quot;dist&quot;</code>, <code>&quot;templates&quot;</code>,
+            <code>&quot;static&quot;</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>ContentRule</code></strong> – Defines how a group of
+         files should be processed.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>name</code>, <code>pattern</code>,
+            <code>template</code>,
+            <code>list_template: Option&lt;String&gt;</code>,
+            <code>list_enabled: bool</code>,
+            <code>extra: HashMap&lt;String, serde_json::Value&gt;</code>.
+         </li>
+         <li>
+            <strong>Constructor</strong>:
+            <code>ContentRule::new(name, pattern, template) -&gt; Self</code>.
+         </li>
+         <li>
+            <strong>Default</strong>: all strings empty,
+            <code>list_enabled = false</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>NavItem</code></strong> – Navigation menu entry.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>label: String</code>,
+            <code>url: String</code>, <code>children: Vec&lt;NavItem&gt;</code>.
+         </li>
+         <li>
+            <strong>Constructor</strong>:
+            <code>NavItem::new(label, url) -&gt; Self</code>.
+         </li>
+      </ul>
+   </li>
+</ul>
+<h3 id="filesystem">Filesystem</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>FileSystem</code> trait</strong> – Abstract filesystem
+         operations. All methods return <code>io::Result</code> or
+         <code>bool</code>.
+      </p>
+      <ul>
+         <li>
+            Required methods:
+            <ul>
+               <li>
+                  <code>read_to_string</code>, <code>read_bytes</code>,
+                  <code>write</code>, <code>create_dir_all</code>,
+                  <code>remove_dir_all</code>, <code>remove_file</code>,
+                  <code>create_dir</code>, <code>exists</code>,
+                  <code>is_dir</code>, <code>is_file</code>,
+                  <code>read_dir</code>, <code>copy_file</code>,
+                  <code>copy_dir_all</code>, <code>walk_dir</code>,
+                  <code>canonicalize</code>, <code>rename</code>,
+                  <code>atomic_write</code>, <code>touch</code>,
+                  <code>metadata</code>, <code>symlink_metadata</code>,
+                  <code>permissions</code>, <code>set_permissions</code>,
+                  <code>read_link</code>, <code>hard_link</code>.
+               </li>
+            </ul>
+         </li>
+         <li>
+            Provided methods (with default implementations):
+            <ul>
+               <li><code>is_symlink</code></li>
+               <li><code>canonicalize_or_join</code></li>
+               <li>
+                  <code>safe_join</code> –
+                  <strong>Important for security</strong>: ensures the resulting
+                  path stays within a base directory.
+               </li>
+               <li><code>copy</code></li>
+               <li><code>rename_or_copy</code></li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>RealFs</code></strong> – Zero‑sized struct implementing
+         <code>FileSystem</code> using <code>std::fs</code> and
+         <code>walkdir</code>.
+      </p>
+   </li>
+</ul>
+<h3 id="content-handling">Content Handling</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>Document</code></strong> – Represents a processed content
+         item.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>metadata: Metadata</code>,
+            <code>body: String</code>, <code>url: String</code>,
+            <code>output_path: PathBuf</code>,
+            <code>source_path: PathBuf</code>, <code>depth: usize</code>,
+            <code>content_type: String</code>, <code>is_list: bool</code>,
+            <code>list_items: Option&lt;Vec&lt;Document&gt;&gt;</code>,
+            <code>taxonomies: HashMap&lt;String, Vec&lt;String&gt;&gt;</code>.
+         </li>
+         <li>
+            <strong>Constructor</strong>:
+            <code
+               >Document::new(metadata, body, url, output_path, source_path,
+               depth, content_type, is_list) -&gt; Result&lt;Self&gt;</code
+            >.
+         </li>
+         <li>
+            <strong>Methods</strong>:
+            <ul>
+               <li><code>relative_url(&amp;self) -&gt; &amp;str</code></li>
+               <li>
+                  <code
+                     >add_taxonomy(&amp;mut self, name: impl Into&lt;String&gt;,
+                     items: Vec&lt;String&gt;)</code
+                  >
+               </li>
+               <li><code>depth(&amp;self) -&gt; usize</code></li>
+               <li>
+                  <code
+                     >with_list_items(self, items: Vec&lt;Self&gt;) -&gt;
+                     Self</code
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Metadata</code></strong> – Front matter data.
+      </p>
+      <ul>
+         <li>
+            <strong>Fields</strong>: <code>title</code>,
+            <code>description</code>, <code>author: Option&lt;String&gt;</code>,
+            <code>repo_url</code>, <code>license</code>,
+            <code>date: Option&lt;NaiveDate&gt;</code>,
+            <code>updated: Option&lt;NaiveDate&gt;</code>,
+            <code>tags: Vec&lt;String&gt;</code>, <code>draft: bool</code>,
+            <code>extra: HashMap&lt;String, serde_json::Value&gt;</code>.
+         </li>
+         <li>
+            <strong>Constructor</strong>:
+            <code
+               >Metadata::new(title, description) -&gt; Result&lt;Self&gt;</code
+            >.
+         </li>
+         <li>
+            <strong>Methods</strong>:
+            <ul>
+               <li><code>is_draft(&amp;self) -&gt; bool</code></li>
+               <li><code>insert_extra(&amp;mut self, key, value)</code></li>
+               <li>
+                  <code
+                     >get_extra(&amp;self, key: &amp;str) -&gt;
+                     Option&lt;&amp;serde_json::Value&gt;</code
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Processor</code> trait</strong> – Interface for
+         transforming source files into <code>Document</code>s.
+      </p>
+      <ul>
+         <li>
+            Required methods:
+            <ul>
+               <li><code>name(&amp;self) -&gt; &amp;str</code></li>
+               <li>
+                  <code
+                     >can_process(&amp;self, relative_path: &amp;Path,
+                     original_path: &amp;Path) -&gt; bool</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >process(&amp;self, fs: &amp;dyn FileSystem, relative_path:
+                     &amp;Path, content_dir: &amp;Path) -&gt;
+                     Result&lt;Option&lt;Document&gt;&gt;</code
+                  >
+               </li>
+            </ul>
+         </li>
+         <li>
+            Provided method: <code>priority(&amp;self) -&gt; i32</code> (default
+            0).
+         </li>
+      </ul>
+   </li>
+</ul>
+<h3 id="template-rendering">Template Rendering</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>RenderContext</code> trait</strong> – Type‑erased context
+         for renderers.
+      </p>
+      <ul>
+         <li>
+            Required methods: <code>as_any(&amp;self) -&gt; &amp;dyn Any</code>,
+            <code>as_mut_any(&amp;mut self) -&gt; &amp;mut dyn Any</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Renderer</code> trait</strong> – Interface for template
+         rendering.
+      </p>
+      <ul>
+         <li>
+            Required method:
+            <code
+               >render(&amp;self, template_name: &amp;str, context: &amp;dyn
+               RenderContext) -&gt; Result&lt;String&gt;</code
+            >.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>TeraRenderer</code></strong> – Concrete renderer using
+         the Tera template engine.
+      </p>
+      <ul>
+         <li>
+            Available when the <code>tera</code> feature is enabled (enabled by
+            default).
+         </li>
+         <li>
+            <strong>Constructors</strong>: <code>TeraRenderer::new()</code>,
+            <code>Default</code>.
+         </li>
+         <li>
+            <strong>Methods</strong>:
+            <ul>
+               <li>
+                  <code
+                     >add_raw_template(&amp;mut self, name: &amp;str, content:
+                     &amp;str) -&gt; Result&lt;()&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >add_template_file(&amp;mut self, path: &amp;Path) -&gt;
+                     Result&lt;()&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >add_template_files_from_dir(&amp;mut self, dir: &amp;Path)
+                     -&gt; Result&lt;()&gt;</code
+                  >
+               </li>
+               <li>
+                  <code
+                     >load_templates_dir(&amp;mut self, dir: &amp;Path) -&gt;
+                     Result&lt;()&gt;</code
+                  >
+               </li>
+               <li><code>enable_autoescape(&amp;mut self)</code></li>
+               <li>
+                  <code
+                     >render_str(&amp;self, template_str: &amp;str, context:
+                     &amp;dyn RenderContext) -&gt; Result&lt;String&gt;</code
+                  >
+               </li>
+               <li><code>as_tera(&amp;self) -&gt; &amp;tera::Tera</code></li>
+               <li>
+                  <code
+                     >as_tera_mut(&amp;mut self) -&gt; &amp;mut tera::Tera</code
+                  >
+               </li>
+            </ul>
+         </li>
+      </ul>
+   </li>
+</ul>
+<h3 id="compiler-pipeline">Compiler Pipeline</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>PipelineBuilder</code></strong> – Builds a
+         <code>Pipeline</code>.
+      </p>
+      <ul>
+         <li>
+            <strong>Constructor</strong>: <code>PipelineBuilder::new()</code>.
+         </li>
+         <li>
+            <strong>Builder methods</strong>: <code>config</code>,
+            <code>load_config</code>, <code>content_dir</code>,
+            <code>output_dir</code>, <code>with_fs</code>,
+            <code>with_renderer</code>, <code>add_processor</code>,
+            <code>with_context_builder</code>, <code>add_generator</code>.
+         </li>
+         <li>
+            <strong>Build</strong>:
+            <code>build(self) -&gt; Result&lt;Pipeline&gt;</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Pipeline</code></strong> – Executes the site generation.
+      </p>
+      <ul>
+         <li>
+            <strong>Method</strong>:
+            <code>run(&amp;self) -&gt; Result&lt;()&gt;</code>.
+         </li>
+         <li>
+            <strong>Accessor</strong>:
+            <code>config(&amp;self) -&gt; &amp;Config</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>ContextBuilder</code> trait</strong> – Creates a
+         <code>RenderContext</code> from <code>Config</code> and
+         <code>Document</code>.
+      </p>
+      <ul>
+         <li>
+            Required method:
+            <code
+               >build_context(&amp;self, config: &amp;Config, doc:
+               &amp;Document) -&gt; Result&lt;Box&lt;dyn
+               RenderContext&gt;&gt;</code
+            >.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>TeraContextBuilder</code></strong> – Default
+         implementation that produces a <code>tera::Context</code> with common
+         page and site variables.
+      </p>
+   </li>
+   <li>
+      <p>
+         <strong><code>Generator</code> trait</strong> – Custom post‑processing
+         step.
+      </p>
+      <ul>
+         <li>
+            Required method:
+            <code
+               >generate(&amp;self, pipeline: &amp;Pipeline, output_base:
+               &amp;Path) -&gt; Result&lt;()&gt;</code
+            >.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>match_pattern</code> function</strong> (in
+         <code>compiler::pattern</code>) – Glob matching for content rule
+         patterns.
+      </p>
+   </li>
+</ul>
+<h3 id="error-handling">Error Handling</h3>
+<ul>
+   <li>
+      <strong><code>Error</code> enum</strong> – Variants: <code>Io</code>,
+      <code>Config</code>, <code>Metadata</code>, <code>Render</code>,
+      <code>Processor</code>, <code>Generator</code>,
+      <code>PathTraversal</code>, <code>MissingConfig</code>,
+      <code>Generation</code>, <code>NotFound</code>,
+      <code>Serialization</code>, <code>Validation</code>,
+      <code>Duplicate</code>, <code>InvalidState</code>, <code>Internal</code>.
+   </li>
+   <li>
+      <strong><code>Result&lt;T&gt;</code></strong> – Alias for
+      <code>core::result::Result&lt;T, Error&gt;</code>.
+   </li>
+</ul>
+<hr />
+<h2 id="usage-example">Usage Example</h2>
+<p>
+   Here’s a minimal but complete example that builds a site from raw HTML
+   fragments using a custom processor, Tera templates, and the default context
+   builder:
+</p>
+<pre><code class="lang-rust"><span class="hljs-keyword">use</span> librawssg::{
+    Config, ContentRule, Document, FileSystem, Metadata, PipelineBuilder, Processor,
+    RealFs, RenderContext, Renderer, TeraContextBuilder, TeraRenderer,
+};
+<span class="hljs-keyword">use</span> std::path::{Path, PathBuf};
+
+<span class="hljs-comment">// 1. Define a simple processor for .raw files</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">RawProcessor</span></span>;
+<span class="hljs-keyword">impl</span> Processor <span class="hljs-keyword">for</span> RawProcessor {
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">name</span></span>(&amp;<span class="hljs-keyword">self</span>) -&gt; &amp;<span class="hljs-symbol">'static</span> <span class="hljs-keyword">str</span> { <span class="hljs-string">"raw"</span> }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">can_process</span></span>(&amp;<span class="hljs-keyword">self</span>, rel: &amp;Path, _orig: &amp;Path) -&gt; <span class="hljs-keyword">bool</span> {
+        rel.extension().and_then(|e| e.to_str()) == <span class="hljs-literal">Some</span>(<span class="hljs-string">"raw"</span>)
+    }
+    <span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">process</span></span>(
+        &amp;<span class="hljs-keyword">self</span>,
+        fs: &amp;dyn FileSystem,
+        rel: &amp;Path,
+        content_dir: &amp;Path,
+    ) -&gt; librawssg::<span class="hljs-built_in">Result</span>&lt;<span class="hljs-built_in">Option</span>&lt;Document&gt;&gt; {
+        <span class="hljs-keyword">let</span> full_path = content_dir.join(rel);
+        <span class="hljs-keyword">let</span> body = fs.read_to_string(&amp;full_path)?;
+        <span class="hljs-keyword">let</span> title = rel.file_stem().unwrap_or_default().to_string_lossy().to_string();
+        <span class="hljs-keyword">let</span> meta = Metadata::new(title, <span class="hljs-built_in">String</span>::new())?;
+        <span class="hljs-keyword">let</span> url = rel.with_extension(<span class="hljs-string">"html"</span>).to_string_lossy().to_string();
+        <span class="hljs-keyword">let</span> output = PathBuf::from(&amp;url);
+        <span class="hljs-keyword">let</span> doc = Document::new(meta, body, url, output, rel.to_path_buf(), <span class="hljs-number">0</span>, <span class="hljs-string">"page"</span>.to_string(), <span class="hljs-literal">false</span>)?;
+        <span class="hljs-literal">Ok</span>(<span class="hljs-literal">Some</span>(doc))
+    }
+}
+
+<span class="hljs-function"><span class="hljs-keyword">fn</span> <span class="hljs-title">main</span></span>() -&gt; <span class="hljs-built_in">Result</span>&lt;(), <span class="hljs-built_in">Box</span>&lt;dyn std::error::Error&gt;&gt; {
+    <span class="hljs-comment">// 2. Configure the site</span>
+    <span class="hljs-keyword">let</span> <span class="hljs-keyword">mut</span> config = Config::new().with_site_name(<span class="hljs-string">"My Site"</span>);
+    config.add_content_rule(ContentRule::new(<span class="hljs-string">"page"</span>, <span class="hljs-string">"**/*.raw"</span>, <span class="hljs-string">"base.tera"</span>));
+    config.build.content_dir = <span class="hljs-string">"content"</span>.to_string();
+    config.build.output_dir = <span class="hljs-string">"dist"</span>.to_string();
+    config.build.static_dir = <span class="hljs-string">"static"</span>.to_string();
+
+    <span class="hljs-comment">// 3. Set up the renderer and load templates</span>
+    <span class="hljs-keyword">let</span> <span class="hljs-keyword">mut</span> renderer = TeraRenderer::new();
+    renderer.load_templates_dir(Path::new(<span class="hljs-string">"templates"</span>))?;
+
+    <span class="hljs-comment">// 4. Build the pipeline</span>
+    <span class="hljs-keyword">let</span> pipeline = PipelineBuilder::new()
+        .config(config)
+        .content_dir(<span class="hljs-string">"content"</span>)
+        .output_dir(<span class="hljs-string">"dist"</span>)
+        .with_fs(<span class="hljs-built_in">Box</span>::new(RealFs))
+        .with_renderer(<span class="hljs-built_in">Box</span>::new(renderer))
+        .with_context_builder(<span class="hljs-built_in">Box</span>::new(TeraContextBuilder))
+        .add_processor(<span class="hljs-built_in">Box</span>::new(RawProcessor))
+        .build()?;
+
+    <span class="hljs-comment">// 5. Run the generation</span>
+    pipeline.run()?;
+    <span class="hljs-built_in">println!</span>(<span class="hljs-string">"Site generated successfully!"</span>);
+    <span class="hljs-literal">Ok</span>(())
+}
+</code></pre>
+<p>
+   For more detailed examples, see the <code>librawssg_demo</code> crate in the
+   repository.
+</p>
+<hr />
+<h2 id="full-api-reference">Full API Reference</h2>
+<p>
+   This section provides a concise reference for every public item re‑exported
+   by <code>librawssg</code>. For deeper details, consult the respective
+   sub‑crate documentation (e.g., <code>librawssg_config</code>,
+   <code>librawssg_compiler</code>).
+</p>
+<h3 id="configuration-types">Configuration Types</h3>
+<p>
+   All configuration types are in <code>librawssg::config</code> (and
+   re‑exported at root).
+</p>
+<ul>
+   <li>
+      <p>
+         <strong><code>Config</code></strong>
+      </p>
+      <ul>
+         <li><code>new() -&gt; Self</code></li>
+         <li><code>default() -&gt; Self</code></li>
+         <li>
+            <code
+               >with_site_name(self, name: impl Into&lt;String&gt;) -&gt;
+               Self</code
+            >
+         </li>
+         <li>
+            <code>add_content_rule(&amp;mut self, rule: ContentRule)</code>
+         </li>
+         <li>
+            <code
+               >find_rule_by_name(&amp;self, name: &amp;str) -&gt;
+               Option&lt;&amp;ContentRule&gt;</code
+            >
+         </li>
+         <li>
+            <code
+               >remove_rule_by_name(&amp;mut self, name: &amp;str) -&gt;
+               Option&lt;ContentRule&gt;</code
+            >
+         </li>
+         <li><code>has_duplicate_rule_names(&amp;self) -&gt; bool</code></li>
+         <li><code>validate(&amp;self) -&gt; Result&lt;()&gt;</code></li>
+         <li>
+            <code>from_yaml_str(yaml: &amp;str) -&gt; Result&lt;Self&gt;</code>
+         </li>
+         <li>
+            <code>to_yaml_string(&amp;self) -&gt; Result&lt;String&gt;</code>
+         </li>
+         <li>
+            <code>from_json_str(json: &amp;str) -&gt; Result&lt;Self&gt;</code>
+         </li>
+         <li>
+            <code>to_json_string(&amp;self) -&gt; Result&lt;String&gt;</code>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>SiteConfig</code></strong>
+      </p>
+      <ul>
+         <li>
+            <code>new(site_name: impl Into&lt;String&gt;) -&gt; Self</code>
+         </li>
+         <li><code>default() -&gt; Self</code></li>
+         <li>
+            Fields: <code>navbar: Vec&lt;NavItem&gt;</code>,
+            <code>sidebar: Vec&lt;NavItem&gt;</code>,
+            <code>site_name: String</code>,
+            <code>description: Option&lt;String&gt;</code>,
+            <code>language: Option&lt;String&gt;</code>,
+            <code>base_url: Option&lt;String&gt;</code>,
+            <code>author: Option&lt;String&gt;</code>,
+            <code>repo_url: Option&lt;String&gt;</code>,
+            <code>license: Option&lt;String&gt;</code>,
+            <code>extra: HashMap&lt;String, serde_json::Value&gt;</code>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>BuildConfig</code></strong>
+      </p>
+      <ul>
+         <li><code>new() -&gt; Self</code></li>
+         <li><code>default() -&gt; Self</code></li>
+         <li>
+            Fields: <code>content_dir: String</code>,
+            <code>output_dir: String</code>, <code>templates_dir: String</code>,
+            <code>static_dir: String</code>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>ContentRule</code></strong>
+      </p>
+      <ul>
+         <li>
+            <code
+               >new(name: impl Into&lt;String&gt;, pattern: impl
+               Into&lt;String&gt;, template: impl Into&lt;String&gt;) -&gt;
+               Self</code
+            >
+         </li>
+         <li><code>default() -&gt; Self</code></li>
+         <li>
+            Fields: <code>name: String</code>, <code>pattern: String</code>,
+            <code>template: String</code>,
+            <code>list_template: Option&lt;String&gt;</code>,
+            <code>list_enabled: bool</code>,
+            <code>extra: HashMap&lt;String, serde_json::Value&gt;</code>
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>NavItem</code></strong>
+      </p>
+      <ul>
+         <li>
+            <code
+               >new(label: impl Into&lt;String&gt;, url: impl
+               Into&lt;String&gt;) -&gt; Self</code
+            >
+         </li>
+         <li><code>default() -&gt; Self</code></li>
+         <li>
+            Fields: <code>label: String</code>, <code>url: String</code>,
+            <code>children: Vec&lt;NavItem&gt;</code>
+         </li>
+      </ul>
+   </li>
+</ul>
+<h3 id="filesystem-types">Filesystem Types</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>FileSystem</code> trait</strong> (in
+         <code>librawssg::fs</code>, re‑exported at root)
+      </p>
+      <ul>
+         <li>Required methods (see above).</li>
+         <li>
+            Provided methods: <code>is_symlink</code>,
+            <code>canonicalize_or_join</code>, <code>safe_join</code>,
+            <code>copy</code>, <code>rename_or_copy</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>RealFs</code></strong> (in <code>librawssg::fs</code>,
+         re‑exported at root)
+      </p>
+      <ul>
+         <li>Implements <code>FileSystem</code> using <code>std::fs</code>.</li>
+         <li>
+            <code>RealFs</code> (unit struct), <code>RealFs::default()</code>.
+         </li>
+      </ul>
+   </li>
+</ul>
+<h3 id="handler-types">Handler Types</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>Document</code></strong> (in
+         <code>librawssg::handler</code>, re‑exported at root)
+      </p>
+      <ul>
+         <li>
+            <code
+               >new(metadata, body, url, output_path, source_path, depth,
+               content_type, is_list) -&gt; Result&lt;Self&gt;</code
+            >
+         </li>
+         <li><code>relative_url(&amp;self) -&gt; &amp;str</code></li>
+         <li><code>add_taxonomy(&amp;mut self, name, items)</code></li>
+         <li><code>depth(&amp;self) -&gt; usize</code></li>
+         <li>
+            <code
+               >with_list_items(self, items: Vec&lt;Self&gt;) -&gt; Self</code
+            >
+         </li>
+         <li>Fields: as listed earlier.</li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Metadata</code></strong>
+      </p>
+      <ul>
+         <li><code>new(title, description) -&gt; Result&lt;Self&gt;</code></li>
+         <li><code>is_draft(&amp;self) -&gt; bool</code></li>
+         <li><code>insert_extra(&amp;mut self, key, value)</code></li>
+         <li>
+            <code
+               >get_extra(&amp;self, key: &amp;str) -&gt;
+               Option&lt;&amp;serde_json::Value&gt;</code
+            >
+         </li>
+         <li>Fields: as listed earlier.</li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Processor</code> trait</strong>
+      </p>
+      <ul>
+         <li>
+            Required: <code>name</code>, <code>can_process</code>,
+            <code>process</code>
+         </li>
+         <li>Provided: <code>priority</code></li>
+      </ul>
+   </li>
+</ul>
+<h3 id="template-types">Template Types</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>RenderContext</code> trait</strong>
+      </p>
+      <ul>
+         <li><code>as_any(&amp;self) -&gt; &amp;dyn Any</code></li>
+         <li><code>as_mut_any(&amp;mut self) -&gt; &amp;mut dyn Any</code></li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Renderer</code> trait</strong>
+      </p>
+      <ul>
+         <li>
+            <code
+               >render(&amp;self, template_name: &amp;str, context: &amp;dyn
+               RenderContext) -&gt; Result&lt;String&gt;</code
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>TeraRenderer</code></strong> (feature <code>tera</code>,
+         enabled by default)
+      </p>
+      <ul>
+         <li><code>new() -&gt; Self</code></li>
+         <li>
+            <code
+               >add_raw_template(&amp;mut self, name: &amp;str, content:
+               &amp;str) -&gt; Result&lt;()&gt;</code
+            >
+         </li>
+         <li>
+            <code
+               >add_template_file(&amp;mut self, path: &amp;Path) -&gt;
+               Result&lt;()&gt;</code
+            >
+         </li>
+         <li>
+            <code
+               >add_template_files_from_dir(&amp;mut self, dir: &amp;Path) -&gt;
+               Result&lt;()&gt;</code
+            >
+         </li>
+         <li>
+            <code
+               >load_templates_dir(&amp;mut self, dir: &amp;Path) -&gt;
+               Result&lt;()&gt;</code
+            >
+         </li>
+         <li><code>enable_autoescape(&amp;mut self)</code></li>
+         <li>
+            <code
+               >render_str(&amp;self, template_str: &amp;str, context: &amp;dyn
+               RenderContext) -&gt; Result&lt;String&gt;</code
+            >
+         </li>
+         <li><code>as_tera(&amp;self) -&gt; &amp;tera::Tera</code></li>
+         <li>
+            <code>as_tera_mut(&amp;mut self) -&gt; &amp;mut tera::Tera</code>
+         </li>
+         <li>Implements <code>Renderer</code> and <code>Default</code>.</li>
+      </ul>
+   </li>
+</ul>
+<h3 id="compiler-types">Compiler Types</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>PipelineBuilder</code></strong>
+      </p>
+      <ul>
+         <li><code>new() -&gt; Self</code></li>
+         <li><code>config(self, config: Config) -&gt; Self</code></li>
+         <li>
+            <code
+               >load_config&lt;P: AsRef&lt;Path&gt; + Send + Sync&gt;(self,
+               path: P) -&gt; Result&lt;Self&gt;</code
+            >
+         </li>
+         <li>
+            <code
+               >content_dir(self, dir: impl Into&lt;PathBuf&gt;) -&gt;
+               Self</code
+            >
+         </li>
+         <li>
+            <code
+               >output_dir(self, dir: impl Into&lt;PathBuf&gt;) -&gt; Self</code
+            >
+         </li>
+         <li>
+            <code>with_fs(self, fs: Box&lt;dyn FileSystem&gt;) -&gt; Self</code>
+         </li>
+         <li>
+            <code
+               >with_renderer(self, renderer: Box&lt;dyn Renderer&gt;) -&gt;
+               Self</code
+            >
+         </li>
+         <li>
+            <code
+               >add_processor(self, processor: Box&lt;dyn Processor&gt;) -&gt;
+               Self</code
+            >
+         </li>
+         <li>
+            <code
+               >with_context_builder(self, builder: Box&lt;dyn
+               ContextBuilder&gt;) -&gt; Self</code
+            >
+         </li>
+         <li>
+            <code
+               >add_generator(self, generator: Box&lt;dyn Generator&gt;) -&gt;
+               Self</code
+            >
+         </li>
+         <li><code>build(self) -&gt; Result&lt;Pipeline&gt;</code></li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Pipeline</code></strong>
+      </p>
+      <ul>
+         <li><code>run(&amp;self) -&gt; Result&lt;()&gt;</code></li>
+         <li><code>config(&amp;self) -&gt; &amp;Config</code></li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>ContextBuilder</code> trait</strong>
+      </p>
+      <ul>
+         <li>
+            <code
+               >build_context(&amp;self, config: &amp;Config, doc:
+               &amp;Document) -&gt; Result&lt;Box&lt;dyn
+               RenderContext&gt;&gt;</code
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>TeraContextBuilder</code></strong> (unit struct)
+      </p>
+      <ul>
+         <li>Implements <code>ContextBuilder</code>.</li>
+         <li>
+            <code>TeraContextBuilder</code> (no fields), <code>Default</code>.
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Generator</code> trait</strong>
+      </p>
+      <ul>
+         <li>
+            <code
+               >generate(&amp;self, pipeline: &amp;Pipeline, output_base:
+               &amp;Path) -&gt; Result&lt;()&gt;</code
+            >
+         </li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>match_pattern</code> function</strong> (accessible via
+         <code>librawssg::compiler::pattern::match_pattern</code>)
+      </p>
+      <ul>
+         <li>
+            Signature:
+            <code
+               >pub fn match_pattern(pattern: &amp;str, path: &amp;Path) -&gt;
+               bool</code
+            >
+         </li>
+         <li>
+            Supports glob patterns with <code>*</code> and <code>**</code>.
+         </li>
+      </ul>
+   </li>
+</ul>
+<h3 id="error-types">Error Types</h3>
+<ul>
+   <li>
+      <p>
+         <strong><code>Error</code> enum</strong> (in
+         <code>librawssg::error</code>, re‑exported at root)
+      </p>
+      <ul>
+         <li>Variants: as listed above.</li>
+         <li>
+            Implements <code>Display</code>, <code>Debug</code>,
+            <code>std::error::Error</code>.
+         </li>
+         <li><code>From&lt;std::io::Error&gt;</code> is implemented.</li>
+      </ul>
+   </li>
+   <li>
+      <p>
+         <strong><code>Result&lt;T&gt;</code></strong> type alias
+      </p>
+      <ul>
+         <li>
+            <code
+               >pub type Result&lt;T&gt; = core::result::Result&lt;T,
+               Error&gt;</code
+            >
+         </li>
+      </ul>
+   </li>
+</ul>
+<hr />
+<h2 id="feature-flags">Feature Flags</h2>
+<p>
+   The <code>tera</code> feature is enabled by default and provides the
+   <code>TeraRenderer</code> implementation. To disable it (e.g., if you use a
+   different template engine), set <code>default-features = false</code> in your
+   <code>Cargo.toml</code>:
+</p>
+<pre><code class="lang-toml"><span class="hljs-section">[dependencies]</span>
+<span class="hljs-attr">librawssg</span> = { version = <span class="hljs-string">"1.0.0"</span>, default-features = <span class="hljs-literal">false</span> }
+</code></pre>
+<p>
+   Without this feature, the crate still exports the core traits
+   (<code>Renderer</code>, <code>RenderContext</code>) and all other
+   functionality, but <code>TeraRenderer</code> and
+   <code>TeraContextBuilder</code> are unavailable.
+</p>
+<hr />
+<h2 id="license">License</h2>
+<p>
+   This project is licensed under the <strong>MIT License</strong>. See the
+   <a href="LICENSE">LICENSE</a> file for details.
+</p>
+<hr />
+<p>
+   <em
+      >This documentation is generated from the source code of the
+      <code>librawssg</code> facade crate and its sub‑crates.</em
+   >
+</p>

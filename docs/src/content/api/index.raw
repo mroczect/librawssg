@@ -1,0 +1,14 @@
+<h1>API Reference</h1>
+
+<p>Welcome to the API documentation for the <code>librawssg</code> workspace. Each crate is documented individually, covering its public types, traits, functions, and usage examples.</p>
+
+<ul>
+  <li><a href="compiler.html"><strong>librawssg_compiler</strong></a> – Build pipeline, builder, context builder, generator, pattern matching, and orchestration.</li>
+  <li><a href="config.html"><strong>librawssg_config</strong></a> – Configuration structures (Config, SiteConfig, BuildConfig, ContentRule, NavItem) with validation and serialization.</li>
+  <li><a href="error.html"><strong>librawssg_error</strong></a> – Unified error enum and Result alias used across all crates.</li>
+  <li><a href="fs.html"><strong>librawssg_fs</strong></a> – Filesystem abstraction trait and RealFs implementation with path traversal protection.</li>
+  <li><a href="handler.html"><strong>librawssg_handler</strong></a> – Document, Metadata, and the Processor trait for content processing.</li>
+  <li><a href="templates.html"><strong>librawssg_templates</strong></a> – RenderContext, Renderer traits, and the TeraRenderer implementation.</li>
+</ul>
+
+<p>Select a crate from the list above to view its complete API documentation, including methods, fields, examples, and testing notes.</p>
