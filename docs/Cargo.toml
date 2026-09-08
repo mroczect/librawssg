@@ -2,9 +2,15 @@
 name = "docs"
 version = "0.1.0"
 edition = "2024"
+description = "Documentation site generator for librawssg"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "docs", "librawssg"]
+categories = ["development-tools::build-utils"]
 
 [dependencies]
-librawssg = {version = "1.0.0", path = "../librawssg" }
+librawssg = { version = "1.0.0", path = "../librawssg" }
 
 [lints]
 workspace = true

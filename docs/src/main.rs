@@ -62,7 +62,7 @@ impl Processor for RawFileProcessor {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn core::error::Error>> {
     let base = Path::new(env!("CARGO_MANIFEST_DIR"));
     let content_dir = base.join("src/content");
     let templates_dir = base.join("src/templates");
