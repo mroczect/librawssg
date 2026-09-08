@@ -1,0 +1,15 @@
+{% include "partials/head.tera" %}
+<body>
+    {% include "partials/navbar.tera" %}
+    <div class="container">
+        {% include "partials/sidebar.tera" %}
+        <main class="content">
+            <article>
+                {{ page_content | safe }}
+            </article>
+        </main>
+    </div>
+    {% include "partials/footer.tera" %}
+    {% include "partials/scripts.tera" %}
+</body>
+</html>
