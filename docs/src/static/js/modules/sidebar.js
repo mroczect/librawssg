@@ -25,11 +25,13 @@ export function initSidebar() {
   function openSidebar() {
     sidebar.classList.add("open");
     overlay.classList.add("active");
+    navbarToggle?.setAttribute("aria-expanded", "true");
   }
 
   function closeSidebar() {
     sidebar.classList.remove("open");
     overlay.classList.remove("active");
+    navbarToggle?.setAttribute("aria-expanded", "false");
   }
 
   if (navbarToggle && sidebar) {
@@ -42,11 +44,13 @@ export function initSidebar() {
     });
   }
 
-  if (closeBtn) {
-    closeBtn.addEventListener("click", closeSidebar);
-  }
+  if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+  if (overlay) overlay.addEventListener("click", closeSidebar);
 
-  if (overlay) {
-    overlay.addEventListener("click", closeSidebar);
-  }
+  // Tutup sidebar jika layar di-resize ke desktop
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 768 && sidebar.classList.contains("open")) {
+      closeSidebar();
+    }
+  });
 }
