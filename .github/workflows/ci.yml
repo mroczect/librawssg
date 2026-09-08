@@ -2,22 +2,27 @@ name: CI
 
 on:
   push:
-    branches: ["master"]
+    branches: ["*"]
   pull_request:
-    branches: ["master"]
+    branches: ["*"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   base:
+    name: Base checks (no features)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.96.0"
           components: rustfmt, clippy
 
       - name: Cache Cargo artifacts
@@ -31,24 +36,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-base-
 
-      - name: Check formatting
+      - name: Check code formatting
         run: cargo fmt --all -- --check
 
-      - name: Lint (no features)
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Run Clippy (no features)
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Test (no features)
-        run: cargo test --workspace --verbose
+      - name: Build (debug, no features)
+        run: cargo build --workspace --all-targets
+
+      - name: Run tests (no features)
+        run: cargo test --workspace --all-targets --verbose
 
   features:
+    name: Full feature checks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          toolchain: "1.96.0"
+          components: rustfmt, clippy
 
       - name: Cache Cargo artifacts
         uses: actions/cache@v4
@@ -61,8 +74,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-features-
 
-      - name: Lint (all features)
-        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Check code formatting
+        run: cargo fmt --all -- --check
 
-      - name: Test (all features)
-        run: cargo test --workspace --verbose --all-features
+      - name: Run Clippy (all features)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Build (debug, all features)
+        run: cargo build --workspace --all-targets --all-features
+
+      - name: Run tests (all features)
+        run: cargo test --workspace --all-targets --all-features --verbose
+
+      - name: Build (release, all features)
+        run: cargo build --workspace --all-targets --all-features --release

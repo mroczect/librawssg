@@ -1,0 +1,22 @@
+[package]
+name = "librawssg_config"
+version = "1.0.0"
+edition = "2024"
+description = "Configuration types and validation for the librawssg static site generator"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "static-site-generator", "config", "yaml", "validation"]
+categories = ["development-tools::build-utils"]
+
+[dependencies]
+librawssg_error = { version = "1.0.0", path = "../librawssg_error" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+serde_yaml = "0.9.34"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

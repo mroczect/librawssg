@@ -1,0 +1,16 @@
+[package]
+name = "librawssg_error"
+version = "1.0.0"
+edition = "2024"
+description = "Unified error types for the librawssg static site generator"
+license = "MIT"
+repository = "https://github.com/mroczect/librawssg"
+readme = "README.md"
+keywords = ["ssg", "static-site-generator", "error", "thiserror"]
+categories = ["development-tools::build-utils"]
+
+[dependencies]
+thiserror = "2.0.20"
+
+[lints]
+workspace = true
