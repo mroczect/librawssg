@@ -1,0 +1,7 @@
+{% import "macros.tera" as nav %}
+<aside class="sidebar">
+    <nav class="sidebar-nav">
+        <h2>Documentation</h2>
+        {{ nav::render_nav(items=site.sidebar, active_url=page_url | default(value='')) }}
+    </nav>
+</aside>
