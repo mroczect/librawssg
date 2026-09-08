@@ -1,0 +1,6 @@
+<footer class="footer">
+    <div class="footer-inner">
+        <p>&copy; {{ now() | date(format="%Y") }} {{ site.site_name }}.
+           Licensed under {{ site.license | default(value="MIT") }}.</p>
+    </div>
+</footer>
